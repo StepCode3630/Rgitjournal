@@ -1,6 +1,14 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
-import { parseCompactMeta, groom } from "./lib/commit-parser.js";
+import { parseCompactMeta, parseMetadata, groom } from "./lib/commit-parser.js";
+import { readFileSync } from "node:fs";
+
+test("shared Rust/JavaScript metadata corpus", () => {
+  const cases = JSON.parse(readFileSync(new URL("../../doc/fixtures/metadata.json", import.meta.url), "utf8"));
+  for (const { input, duration, status } of cases) {
+    assert.deepStrictEqual(parseMetadata(input), { duration, status }, input);
+  }
+});
 
 // Helper to create a mock commit object
 function mockCommit(message) {

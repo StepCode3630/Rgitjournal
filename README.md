@@ -1,5 +1,9 @@
 # GitJournal
 
+Migration du bureau vers Tauri/Rust en cours : voir [les critères de parité](doc/tauri-parity.md).
+Le cœur se vérifie avec `cargo test --manifest-path crates/journal-core/Cargo.toml`.
+Rust est nécessaire uniquement pour cette nouvelle tranche ; Electron et la CLI restent disponibles.
+
 Application Electron pour générer un journal de travail à partir des commits Git locaux et des commentaires d'issues GitHub.
 
 Le même moteur est disponible en ligne de commande et comme GitHub Action, pour tenir un `journal.md` à jour automatiquement (voir [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)).
