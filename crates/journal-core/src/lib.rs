@@ -1,6 +1,9 @@
 //! Moteur de domaine partagé par la future application Tauri.
 use regex::Regex;
 use std::sync::LazyLock;
+pub mod github;
+pub mod journal;
+pub mod project;
 
 fn re(pattern: &'static str) -> Regex {
     Regex::new(pattern).expect("expression régulière interne valide")
