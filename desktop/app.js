@@ -1,4 +1,10 @@
-import { groupEntries, formatCell, csv, exportTable } from "./model.js";
+import {
+  groupEntries,
+  formatCell,
+  csv,
+  exportTable,
+  startDateIso,
+} from "./model.js";
 import { condenseDescription } from "./description-filter.js";
 const invoke = (...args) => window.__TAURI__.core.invoke(...args);
 const $ = (id) => document.getElementById(id);
@@ -100,6 +106,7 @@ function confirmAction(message) {
 }
 function link(url, label) {
   const a = node("a", label, { href: "#" });
+  a.dataset.url = url;
   a.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -297,9 +304,10 @@ const actions = {
           .split(/[,;]+/)
           .map((s) => s.trim())
           .filter(Boolean);
-        config.journalStartDate = config.since
-          ? new Date(config.since + "T00:00:00").toISOString()
-          : null;
+        config.projectName = config.projectName.trim();
+        if (!config.projectName || !config.me.length)
+          throw new Error("Nom du projet et auteur Git requis");
+        config.journalStartDate = startDateIso(config.since);
         await accept(await invoke("create_project", { config }));
       },
     );
@@ -373,8 +381,27 @@ const actions = {
   print: () => {
     if (project) window.print();
   },
-  stats: () =>
-    dialog("Statistiques", [node("pre", JSON.stringify(stats, null, 2))], null),
+  stats: () => {
+    const list = node("dl");
+    for (const [key, label] of [
+      ["fromUser", "Commits correspondant aux filtres"],
+      ["withMetadata", "Commits avec durée"],
+      ["afterExclusions", "Commits après exclusions"],
+      ["manualEntries", "Entrées manuelles"],
+      ["issueComments", "Commentaires GitHub"],
+      ["total", "Total des entrées"],
+    ]) {
+      list.append(node("dt", label), node("dd", String(stats[key] ?? 0)));
+    }
+    dialog(
+      "Statistiques",
+      [
+        list,
+        node("p", "Auteurs Git trouvés : " + (stats.gitUsers ?? []).join(", ")),
+      ],
+      null,
+    );
+  },
   help: () =>
     dialog(
       "Aide GitJournal",
@@ -401,10 +428,16 @@ const actions = {
 };
 function tableForPdf() {
   const table = tableForExport();
-  table.rows = [...document.querySelectorAll("tbody tr")].map((row) =>
+  const rows = [...document.querySelectorAll("tbody tr")];
+  table.rows = rows.map((row) =>
     [...row.cells]
       .slice(0, project.columns.length)
       .map((c) => c.innerText.trim()),
+  );
+  table.links = rows.map((row) =>
+    [...row.cells]
+      .slice(0, project.columns.length)
+      .map((cell) => cell.querySelector("a[data-url]")?.dataset.url ?? null),
   );
   return table;
 }

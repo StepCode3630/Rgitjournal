@@ -6,7 +6,9 @@ pub mod journal;
 pub mod project;
 
 fn re(pattern: &'static str) -> Regex {
-    Regex::new(pattern).expect("expression régulière interne valide")
+    // JavaScript \s includes BOM and excludes NEL; keep the source parser's grammar.
+    let pattern = pattern.replace(r"\s", r"[\t\n\r\x0B\x0C \u{00A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}]");
+    Regex::new(&pattern).expect("expression régulière interne valide")
 }
 
 /// Durée déclarée en minutes et statut, sans normalisation de casse.
@@ -17,9 +19,11 @@ pub struct Metadata {
 }
 
 pub fn parse_compact(content: &str) -> Option<Metadata> {
-    static COMPACT: LazyLock<Regex> =
-        LazyLock::new(|| re(r"(?i)^(?:([0-9]+)h(?:([0-9]+)m?)?|([0-9]+)m)(?:\s+([a-z0-9_]+))?$"));
-    static IMPLICIT: LazyLock<Regex> = LazyLock::new(|| re(r"(?i)^([0-9]+)\s+([a-z][a-z0-9_]*)$"));
+    static COMPACT: LazyLock<Regex> = LazyLock::new(|| {
+        re(r"(?i)^(?:([0-9]+)h(?:([0-9]+)m?)?|([0-9]+)m)(?:\s+((?-u:[a-z0-9_]+)))?$")
+    });
+    static IMPLICIT: LazyLock<Regex> =
+        LazyLock::new(|| re(r"(?i)^([0-9]+)\s+((?-u:[a-z][a-z0-9_]*))$"));
     if let Some(c) = COMPACT.captures(content) {
         let num = |i| c.get(i).map_or(Some(0), |m| m.as_str().parse::<u64>().ok());
         return Some(Metadata {
@@ -37,9 +41,9 @@ pub fn parse_compact(content: &str) -> Option<Metadata> {
 }
 
 pub fn parse_metadata(line: &str) -> Metadata {
-    static BRACKETS: LazyLock<Regex> = LazyLock::new(|| re(r"\[(.*?)\]"));
+    static BRACKETS: LazyLock<Regex> = LazyLock::new(|| re(r"\[([^\r\n\u{2028}\u{2029}]*?)\]"));
     static COMPACT_HINT: LazyLock<Regex> =
-        LazyLock::new(|| re(r"(?i)[0-9]+[hm]|^[0-9]+\s+[a-z][a-z0-9_]*$"));
+        LazyLock::new(|| re(r"(?i)[0-9]+[hm]|^[0-9]+\s+(?-u:[a-z][a-z0-9_]*)$"));
     static NUMBERS: LazyLock<Regex> = LazyLock::new(|| re(r"[0-9]+"));
     let brackets: Vec<_> = BRACKETS.captures_iter(line).collect();
     if brackets.len() == 1 && COMPACT_HINT.is_match(&brackets[0][1]) {

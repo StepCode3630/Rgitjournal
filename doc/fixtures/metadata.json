@@ -1,18 +1,102 @@
 [
-  {"input":"Title [2h30 done]","duration":150,"status":"done"},
-  {"input":"[2H30M DONE]","duration":150,"status":"DONE"},
-  {"input":"[45m wip]","duration":45,"status":"wip"},
-  {"input":"[1h]","duration":60,"status":""},
-  {"input":"[5 done]","duration":5,"status":"done"},
-  {"input":"[5]","duration":5,"status":""},
-  {"input":"[2][30][Done]","duration":150,"status":"Done"},
-  {"input":"[90]","duration":90,"status":""},
-  {"input":"[2][done]","duration":2,"status":"done"},
-  {"input":"[WIP]","duration":0,"status":"WIP"},
-  {"input":"Sans métadonnées éà漢字","duration":0,"status":""},
-  {"input":"[0m]","duration":0,"status":""},
-  {"input":"[2h invalid status]","duration":0,"status":""},
-  {"input":"[1 2 3]","duration":0,"status":""},
-  {"input":"[12x]","duration":12,"status":""},
-  {"input":"[45m][WIP]","duration":45,"status":"WIP"}
+  {
+    "input": "Title [2h30 done]",
+    "duration": 150,
+    "status": "done"
+  },
+  {
+    "input": "[2H30M DONE]",
+    "duration": 150,
+    "status": "DONE"
+  },
+  {
+    "input": "[45m wip]",
+    "duration": 45,
+    "status": "wip"
+  },
+  {
+    "input": "[1h]",
+    "duration": 60,
+    "status": ""
+  },
+  {
+    "input": "[5 done]",
+    "duration": 5,
+    "status": "done"
+  },
+  {
+    "input": "[5]",
+    "duration": 5,
+    "status": ""
+  },
+  {
+    "input": "[2][30][Done]",
+    "duration": 150,
+    "status": "Done"
+  },
+  {
+    "input": "[90]",
+    "duration": 90,
+    "status": ""
+  },
+  {
+    "input": "[2][done]",
+    "duration": 2,
+    "status": "done"
+  },
+  {
+    "input": "[WIP]",
+    "duration": 0,
+    "status": "WIP"
+  },
+  {
+    "input": "Sans métadonnées éà漢字",
+    "duration": 0,
+    "status": ""
+  },
+  {
+    "input": "[0m]",
+    "duration": 0,
+    "status": ""
+  },
+  {
+    "input": "[2h invalid status]",
+    "duration": 0,
+    "status": ""
+  },
+  {
+    "input": "[1 2 3]",
+    "duration": 0,
+    "status": ""
+  },
+  {
+    "input": "[12x]",
+    "duration": 12,
+    "status": ""
+  },
+  {
+    "input": "[45m][WIP]",
+    "duration": 45,
+    "status": "WIP"
+  },
+  {
+    "input": "[5 K]",
+    "duration": 5,
+    "status": ""
+  },
+  {
+    "input": "[5 ſ]",
+    "duration": 5,
+    "status": ""
+  },
+  {
+    "input": "[5﻿done]",
+    "duration": 5,
+    "status": "done"
+  },
+  {
+    "input": "[30m\r]",
+    "duration": 0,
+    "status": ""
+  }
 ]

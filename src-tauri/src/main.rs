@@ -9,6 +9,23 @@ use std::{
 };
 use tauri::{Emitter, Manager, State};
 type Shared = Arc<Mutex<session::Session>>;
+
+fn project_argument(argument: &std::ffi::OsStr) -> Option<PathBuf> {
+    if argument
+        .to_str()
+        .is_some_and(|s| s.starts_with("https://") || s.starts_with("http://"))
+    {
+        return None;
+    }
+    let path = if let Some(uri) = argument.to_str().filter(|s| s.starts_with("file:")) {
+        tauri::Url::parse(uri).ok()?.to_file_path().ok()?
+    } else {
+        PathBuf::from(argument)
+    };
+    path.extension()
+        .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("gitj"))
+        .then_some(path)
+}
 static ACTIVE_WRITES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 static CLOSE_QUEUED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 struct WriteGuard;
@@ -41,8 +58,7 @@ async fn initial_project(state: State<'_, Shared>) -> Result<Option<Value>> {
         }
         let arg = std::env::args_os()
             .skip(1)
-            .map(PathBuf::from)
-            .find(|p| p.extension().is_some_and(|e| e == "gitj"));
+            .find_map(|arg| project_argument(&arg));
         let path = arg.or_else(|| s.settings["lastOpenedFile"].as_str().map(PathBuf::from));
         match path {
             Some(p) => s.open(&p).map(Some),
@@ -52,18 +68,41 @@ async fn initial_project(state: State<'_, Shared>) -> Result<Option<Value>> {
     .await
 }
 #[tauri::command]
-fn current_project(state: State<'_, Shared>) -> Result<Option<Value>> {
-    Ok(state.lock().map_err(|e| e.to_string())?.project.clone())
+fn current_project(
+    window: tauri::WebviewWindow,
+    state: State<'_, Shared>,
+) -> Result<Option<Value>> {
+    let project = state.lock().map_err(|e| e.to_string())?.project.clone();
+    if let Some(project) = &project {
+        let authors = engine::authors(&project["me"]).join(" / ");
+        window
+            .set_title(&format!(
+                "Journal de travail - {} - {}",
+                authors,
+                project["projectName"].as_str().unwrap_or("")
+            ))
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(project)
 }
 #[tauri::command]
 async fn open_project(state: State<'_, Shared>) -> Result<Option<Value>> {
     let state = state.inner().clone();
     durable(move || {
-        let Some(path) = rfd::FileDialog::new()
+        let directory = state
+            .lock()
+            .map_err(|e| e.to_string())?
+            .path
+            .as_ref()
+            .and_then(|p| p.parent())
+            .map(|p| p.to_path_buf());
+        let mut dialog = rfd::FileDialog::new()
             .set_title("Projet GitJournal")
-            .add_filter("Projet GitJournal", &["gitj"])
-            .pick_file()
-        else {
+            .add_filter("Projet GitJournal", &["gitj"]);
+        if let Some(directory) = directory {
+            dialog = dialog.set_directory(directory);
+        }
+        let Some(path) = dialog.pick_file() else {
             return Ok(None);
         };
         state
@@ -85,6 +124,12 @@ async fn create_project(config: Value, state: State<'_, Shared>) -> Result<Optio
             }
         }
         project::validate(&p)?;
+        if p["projectName"]
+            .as_str()
+            .is_none_or(|s| s.trim().is_empty())
+        {
+            return Err("Nom du projet requis".into());
+        }
         let Some(path) = rfd::FileDialog::new()
             .set_title("Projet GitJournal")
             .add_filter("Projet GitJournal", &["gitj"])
@@ -241,6 +286,28 @@ async fn export_file(
     })
     .await
 }
+#[cfg(target_os = "macos")]
+fn show_main(app: &tauri::AppHandle) -> Result<()> {
+    let window = if let Some(window) = app.get_webview_window("main") {
+        window
+    } else {
+        let config = app
+            .config()
+            .app
+            .windows
+            .first()
+            .ok_or("Configuration de fenêtre absente")?;
+        tauri::WebviewWindowBuilder::from_config(app, config)
+            .map_err(|e| e.to_string())?
+            .build()
+            .map_err(|e| e.to_string())?
+    };
+    window
+        .show()
+        .and_then(|_| window.set_focus())
+        .map_err(|e| e.to_string())
+}
+
 fn main() {
     let app = tauri::Builder::default()
         .setup(|app| {
@@ -388,7 +455,14 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("Impossible de démarrer GitJournal");
     app.run(|app, event| match event {
-        tauri::RunEvent::ExitRequested { api, .. } => {
+        tauri::RunEvent::ExitRequested { api, code, .. } => {
+            #[cfg(target_os = "macos")]
+            if code.is_none() {
+                api.prevent_exit();
+                return;
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = code;
             use std::sync::atomic::Ordering::SeqCst;
             if ACTIVE_WRITES.load(SeqCst) > 0 {
                 api.prevent_exit();
@@ -405,7 +479,7 @@ fn main() {
         tauri::RunEvent::Opened { urls } => {
             for url in urls {
                 if let Ok(path) = url.to_file_path() {
-                    if path.extension().is_some_and(|e| e == "gitj") {
+                    if project_argument(path.as_os_str()).is_some() {
                         let state = app.state::<Shared>();
                         let result = state
                             .lock()
@@ -413,6 +487,10 @@ fn main() {
                             .and_then(|mut s| s.open(&path));
                         match result {
                             Ok(_) => {
+                                #[cfg(target_os = "macos")]
+                                if let Err(error) = show_main(app) {
+                                    let _ = app.emit("project-error", error);
+                                }
                                 let _ = app.emit("project-opened", ());
                             }
                             Err(e) => {
@@ -425,4 +503,24 @@ fn main() {
         }
         _ => {}
     });
+}
+
+#[cfg(test)]
+mod argument_tests {
+    use super::*;
+    #[test]
+    fn file_associations_accept_paths_and_percent_encoded_uris() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("projet é & '.GITJ");
+        let url = tauri::Url::from_file_path(&path).unwrap();
+        assert_eq!(project_argument(path.as_os_str()), Some(path.clone()));
+        assert_eq!(
+            project_argument(std::ffi::OsStr::new(url.as_str())),
+            Some(path)
+        );
+        assert_eq!(
+            project_argument(std::ffi::OsStr::new("https://example.invalid/projet.gitj")),
+            None
+        );
+    }
 }

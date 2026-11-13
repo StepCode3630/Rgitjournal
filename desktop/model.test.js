@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { columnValue, groupEntries, csv } from "./model.js";
+import { columnValue, groupEntries, csv, startDateIso } from "./model.js";
+
+test("project start dates retain UTC date-only semantics", () => {
+  assert.equal(startDateIso("2026-01-01"), "2026-01-01T00:00:00.000Z");
+  assert.equal(startDateIso(""), null);
+});
 test("custom regex and capture group retain JavaScript semantics", () => {
   assert.equal(
     columnValue(

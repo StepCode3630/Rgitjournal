@@ -34,6 +34,26 @@
         "name": "GitJournal Project",
         "role": "Editor"
       }
-    ]
+    ],
+    "resources": {
+      "../LICENSE": "LICENSE",
+      "fonts/OFL.txt": "licenses/NotoSans-OFL.txt"
+    },
+    "linux": {
+      "deb": {
+        "depends": ["git"],
+        "desktopTemplate": "linux/GitJournal.desktop",
+        "files": {
+          "/usr/share/mime/packages/gitjournal.xml": "linux/gitjournal.xml"
+        }
+      },
+      "rpm": {
+        "depends": ["git"],
+        "desktopTemplate": "linux/GitJournal.desktop",
+        "files": {
+          "/usr/share/mime/packages/gitjournal.xml": "linux/gitjournal.xml"
+        }
+      }
+    }
   }
 }

@@ -6,6 +6,11 @@ export function columnValue(entry, column) {
   }
   return value;
 }
+
+// Date-only inputs use UTC, as in the original Electron creation form.
+export function startDateIso(value) {
+  return value ? new Date(value).toISOString() : null;
+}
 export function formatCell(entry, column) {
   const value = columnValue(entry, column);
   if (column.format === "date")

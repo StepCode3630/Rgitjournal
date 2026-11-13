@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=GitJournal
+Comment=Journal de travail Git
+Exec={{exec}} %U
+Icon={{icon}}
+Terminal=false
+Type=Application
+Categories=Office;Utility;
+MimeType=application/x-gitjournal;
+StartupWMClass=gitjournal-desktop

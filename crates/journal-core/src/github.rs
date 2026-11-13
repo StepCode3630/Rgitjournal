@@ -145,7 +145,7 @@ pub fn groom_comment(comment: &Value, issue: Option<&Value>) -> Value {
 }
 
 pub fn read_comments(base: &str, project: &Value, token: &str) -> Result<Vec<Value>> {
-    let Some(c) = re(r"^https://github\.com/([^/]+)/([^/#?]+)$").captures(base) else {
+    let Some(c) = re(r"(?i)^https?://github\.com/([^/]+)/([^/#?]+)$").captures(base) else {
         return Ok(vec![]);
     };
     let api = format!("https://api.github.com/repos/{}/{}", &c[1], &c[2]);
@@ -194,6 +194,12 @@ fn filter_comments(
     project: &Value,
     since: Option<chrono::DateTime<chrono::FixedOffset>>,
 ) -> Result<Vec<Value>> {
+    for comment in comments {
+        comment["created_at"]
+            .as_str()
+            .and_then(|date| chrono::DateTime::parse_from_rfc3339(date).ok())
+            .ok_or("Commentaire GitHub invalide : date de création absente ou illisible")?;
+    }
     let index: HashMap<_, _> = issues
         .iter()
         .filter_map(|i| Some((i["url"].as_str()?, i)))

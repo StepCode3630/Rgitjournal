@@ -4,15 +4,16 @@ import gi
 gi.require_version('Atspi','2.0')
 from gi.repository import Atspi
 root=Path.cwd()
+executable=(Path(sys.argv[1]) if len(sys.argv)>1 else root/'src-tauri/target/debug/gitjournal-desktop').resolve()
 with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
- d=Path(tmp);repo=d/'repo';repo.mkdir()
+ d=Path(tmp);repo=d/"repo é & '";repo.mkdir()
  def git(*args):return subprocess.check_output(['git','-C',str(repo),*args],stderr=subprocess.PIPE)
  git('init','-q','-b','main')
  git('-c','core.hooksPath='+str(repo),'-c','commit.gpgsign=false','-c','user.name=Test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','Tâche vérifiée [30m done]\nDescription <script>data</script>')
  p={'projectName':'Essai Fedora','me':'Test','journalStartDate':None,'exceptions':[],'columns':[{'label':'Date','source':'date','format':'date','field':'date'},{'label':'Tâche','source':'name','field':'name'},{'label':'Description','source':'description','field':'description'},{'label':'Durée','source':'duration','format':'duration','field':'duration'},{'label':'Statut','source':'status','field':'status'}]}
  project=repo/'essai.gitj';project.write_text(json.dumps(p))
  env={**os.environ,'XDG_CONFIG_HOME':str(d/'config'),'XDG_DATA_HOME':str(d/'data'),'GDK_BACKEND':'x11','GTK_MODULES':'gail:atk-bridge'}
- proc=subprocess.Popen([str(root/'src-tauri/target/debug/gitjournal-desktop'),str(project)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+ proc=subprocess.Popen([str(executable),project.as_uri()],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
  def app():
   desktop=Atspi.get_desktop(0)
   for i in range(desktop.get_child_count()):
@@ -33,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    if proc.poll() is not None:raise RuntimeError(proc.stderr.read())
    a=app()
    names=[n.get_name() for n in walk(a)]
-   if any('Essai Fedora' in name for name in names):break
+   if any('Essai Fedora' in name for name in names) and '+ Ajouter une entrée' in names:break
    time.sleep(.3)
   else:raise RuntimeError('Interface non trouvée : '+repr(names))
   print('Journal Git rendu dans la webview Tauri.')
@@ -60,8 +61,11 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   subprocess.run(['wmctrl','-ia',window],check=True);time.sleep(.3)
   xdo.xdo_move_mouse.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int,ctypes.c_int]
   xdo.xdo_click_window.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.c_int]
+  def type_text(text,select=True):
+   if select:xdo.xdo_send_keysequence_window(xd,int(window,16),b'ctrl+a',12000)
+   xdo.xdo_enter_text_window(xd,int(window,16),text.encode(),12000)
   def set_field(name,text):
-   target=wait_for(lambda:find('entry',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN);xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1);xdo.xdo_send_keysequence_window(xd,0,b'ctrl+a',12000);xdo.xdo_enter_text_window(xd,0,text.encode(),12000);time.sleep(.15)
+   target=wait_for(lambda:find('entry',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN);xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1);type_text(text);time.sleep(.15)
   set_field('Tâche','Manual <script>data</script>')
   set_field('Description','Description test')
   set_field('Durée','30')
@@ -84,9 +88,8 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
   print('Préférences, statistiques et aide ouvertes et fermées.')
   def native_dialog(title):
-   desktop=Atspi.get_desktop(0)
-   for i in range(desktop.get_child_count()):
-    candidate=desktop.get_child_at_index(i)
+   candidate=app()
+   if candidate:
     for j in range(candidate.get_child_count()):
      window=candidate.get_child_at_index(j)
      if title in window.get_name():return window
@@ -124,9 +127,38 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   wait_for(lambda:any(e.get('excluded') for e in json.loads(project.read_text())['exceptions']))
   print('Suppression manuelle et exclusion validées depuis les formulaires.')
   proc.terminate();proc.wait(timeout=5)
-  proc=subprocess.Popen([str(root/'src-tauri/target/debug/gitjournal-desktop')],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  proc=subprocess.Popen([str(executable)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
   wait_for(lambda:any('Essai Fedora' in n.get_name() for n in walk(app())))
   print('Dernier projet restauré au redémarrage, sans argument de fichier.')
+  window=next(line.split()[0] for line in subprocess.check_output(['wmctrl','-lp'],text=True).splitlines() if len(line.split())>2 and line.split()[2]==str(proc.pid))
+  subprocess.run(['wmctrl','-ia',window],check=True)
+  click('Nouveau')
+  set_field('Nom du projet','Nouveau test')
+  set_field('Auteur(s) Git (virgule ou point-virgule)','Test')
+  click('Enregistrer')
+  native=wait_for(lambda:native_dialog('Projet GitJournal'))
+  def accessible_text(n):
+   try:
+    if not n.get_state_set().contains(Atspi.StateType.EDITABLE):return ''
+    return Atspi.Text.get_text(n,0,-1)
+   except Exception:return ''
+  filename=next(n for n in walk(native) if accessible_text(n)=='projet.gitj')
+  rect=Atspi.Component.get_extents(filename,Atspi.CoordType.SCREEN)
+  xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)
+  new_project=repo/'nouveau.gitj';Atspi.EditableText.set_text_contents(filename,str(new_project))
+  save=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Save','Enregistrer']);save.get_action_iface().do_action(0)
+  wait_for(lambda:new_project.exists());assert json.loads(new_project.read_text())['projectName'].lower()=='nouveau test'
+  print('Création d’un nouveau projet via le dialogue natif validée.')
+  time.sleep(.3);click('Ouvrir')
+  native=wait_for(lambda:native_dialog('Projet GitJournal'))
+  item=wait_for(lambda:next((n for n in walk(native) if n.get_name()=='essai.gitj'),None))
+  rect=Atspi.Component.get_extents(item,Atspi.CoordType.SCREEN)
+  xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)
+  opening=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Open','Ouvrir']);opening.get_action_iface().do_action(0)
+  wait_for(lambda:json.loads(preferences.read_text()).get('lastOpenedFile')==str(project))
+  print('Ouverture d’un projet existant via le dialogue natif validée.')
+
+
   xdo.xdo_free.argtypes=[ctypes.c_void_p];xdo.xdo_free(xd)
 
 

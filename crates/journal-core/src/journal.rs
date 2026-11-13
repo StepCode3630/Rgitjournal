@@ -45,17 +45,20 @@ pub fn groom(message: &str) -> Value {
         let m = parse_metadata(line);
         if m.duration > 0 || !m.status.is_empty() {
             metadata = m;
-            let brackets = re(r"\[(.*?)\]");
+            let brackets = re(r"\[([^\r\n\u{2028}\u{2029}]*?)\]");
             let contents: Vec<_> = brackets.captures_iter(line).collect();
             let compact = contents.len() == 1
-                && re(r"(?i)[0-9]+[hm]|^[0-9]+\s+[a-z][a-z0-9_]*$").is_match(&contents[0][1]);
+                && re(r"(?i)[0-9]+[hm]|^[0-9]+\s+(?-u:[a-z][a-z0-9_]*)$").is_match(&contents[0][1]);
             let stripped = if compact {
-                re(r"\s*\[.*?\]\s*")
+                re(r"\s*\[[^\r\n\u{2028}\u{2029}]*?\]\s*")
                     .replacen(line, 1, " ")
                     .trim()
                     .to_owned()
             } else {
-                re(r"\s*\[.*?\]").replace_all(line, "").trim().to_owned()
+                re(r"\s*\[[^\r\n\u{2028}\u{2029}]*?\]")
+                    .replace_all(line, "")
+                    .trim()
+                    .to_owned()
             };
             if i == 0 {
                 name = stripped;
@@ -74,16 +77,40 @@ pub fn groom(message: &str) -> Value {
 
 pub fn remote(repo: &Path) -> String {
     let raw = git(repo, &["remote".into(), "get-url".into(), "origin".into()]).unwrap_or_default();
+    normalize_remote(&raw)
+}
+
+fn normalize_remote(raw: &str) -> String {
     let raw = raw.trim();
     let ssh = re(r"^git@([^:]+):(.+)$");
     let url = if let Some(c) = ssh.captures(raw) {
         format!("https://{}/{}", &c[1], &c[2])
+    } else if let Ok(url) = reqwest::Url::parse(raw) {
+        if url.scheme() == "ssh" {
+            format!("https://{}{}", url.host_str().unwrap_or(""), url.path())
+        } else {
+            raw.to_owned()
+        }
     } else {
-        re(r"//[^/@]+@").replace(raw, "//").into_owned()
+        return String::new();
     };
-    url.trim_end_matches('/')
+    let Ok(mut url) = reqwest::Url::parse(&url) else {
+        return String::new();
+    };
+    if !["http", "https"].contains(&url.scheme()) || url.host_str().is_none() {
+        return String::new();
+    };
+    let _ = url.set_username("");
+    let _ = url.set_password(None);
+    url.set_query(None);
+    url.set_fragment(None);
+    let path = url
+        .path()
+        .trim_end_matches('/')
         .trim_end_matches(".git")
-        .to_owned()
+        .to_owned();
+    url.set_path(&path);
+    url.to_string().trim_end_matches('/').to_owned()
 }
 
 pub fn apply_exceptions(entries: Vec<Value>, exceptions: &[Value]) -> Vec<Value> {
@@ -212,6 +239,17 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn remote_links_support_ssh_and_never_contain_credentials() {
+        for input in [
+            "git@GitHub.com:owner/repo.git",
+            "ssh://git@github.com/owner/repo.git",
+            "https://user:synthetic@github.com/owner/repo.git?token=synthetic",
+        ] {
+            assert_eq!(normalize_remote(input), "https://github.com/owner/repo");
+        }
+        assert_eq!(normalize_remote("/local/repository"), "");
+    }
     #[test]
     fn groom_text_and_first_metadata() {
         assert_eq!(

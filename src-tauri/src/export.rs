@@ -204,7 +204,7 @@ pub fn pdf(title: &str, table: &Value) -> Result<Vec<u8>> {
         .unwrap_or(1) as f32
         * 10.;
     y -= header_height + 12.;
-    for row in rows {
+    for (row_index, row) in rows.into_iter().enumerate() {
         let spanning = row.len() == 1;
         let cells: Vec<_> = row
             .iter()
@@ -220,6 +220,26 @@ pub fn pdf(title: &str, table: &Value) -> Result<Vec<u8>> {
             for (i, cell) in cells.iter().enumerate() {
                 if let Some(s) = cell.get(line) {
                     fonts.draw(&mut ops, s, 28. + i as f32 * width, y, 8.);
+                    if let Some(url) = table["links"][row_index][i]
+                        .as_str()
+                        .and_then(|s| tauri::Url::parse(s).ok())
+                        .filter(|u| ["http", "https"].contains(&u.scheme()))
+                    {
+                        ops.push(Op::LinkAnnotation {
+                            link: LinkAnnotation::new(
+                                Rect {
+                                    x: Pt(28. + i as f32 * width),
+                                    y: Pt(y - 2.),
+                                    width: Pt(width - 8.),
+                                    height: Pt(11.),
+                                },
+                                Actions::uri(url.to_string()),
+                                Some(BorderArray::Solid([0., 0., 0.])),
+                                None,
+                                None,
+                            ),
+                        });
+                    }
                 }
             }
             y -= 11.;
