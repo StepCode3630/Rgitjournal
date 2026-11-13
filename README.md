@@ -4,24 +4,155 @@ Application de bureau Tauri/Rust pour générer un journal de travail à partir 
 
 Le même moteur est disponible en ligne de commande et comme GitHub Action, pour tenir un `journal.md` à jour automatiquement (voir [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)).
 
-## Première utilisation
+## Installer l’application
 
-### 1. Installer les dépendances
+L’application installée ne nécessite ni Node.js, ni pnpm, ni Rust, ni Electron.
+**Git doit être installé et accessible à l’application** pour lire les commits locaux.
+Choisir un paquet correspondant au système et à l’architecture de la machine
+(`x64`/`amd64`/`x86_64` pour Intel/AMD 64 bits, `arm64`/`aarch64` pour ARM).
 
-Pour développer : Node.js 24, pnpm, Rust stable et Git, ainsi que les
-[prérequis système propres à votre plateforme](src/BUILD.md).
-L’application distribuée ne nécessite ni Node.js ni Electron ; Git reste requis.
+Les installateurs sont produits par les commandes de compilation décrites plus bas,
+dans `src-tauri/target/release/bundle/`. Ce dépôt ne publie pas automatiquement de
+paquets : si vous n’avez pas reçu d’installateur, suivre **Compiler depuis les sources**.
+La CI actuelle vérifie la compilation et les tests, sans fournir d’installateurs.
 
+| Système | Format | Sous-dossier de sortie |
+|---|---|---|
+| Windows 10/11 | Installateur NSIS `.exe` ou Windows Installer `.msi` | `nsis/` ou `msi/` |
+| macOS | Image `.dmg` ou application `.app` | `dmg/` ou `macos/` |
+| Fedora et dérivées compatibles | Paquet `.rpm` | `rpm/` |
+| Debian/Ubuntu et dérivées compatibles | Paquet `.deb` | `deb/` |
+
+### Windows 10 et Windows 11
+
+1. Installer [Git pour Windows](https://git-scm.com/downloads/win), avec Git accessible
+   depuis les applications, puis vérifier `git --version` dans un nouveau terminal.
+2. Exécuter l’installateur GitJournal `.exe` ou `.msi` et suivre l’assistant.
+3. Si nécessaire, installer le [runtime Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/).
+   L’installateur Tauri peut le télécharger s’il manque ; une connexion Internet est alors nécessaire.
+4. Ouvrir **GitJournal** depuis le menu Démarrer.
+
+### macOS
+
+1. Vérifier `git --version` dans Terminal. Si Git manque, installer les outils Apple
+   avec `xcode-select --install`, puis terminer leur installation.
+2. Ouvrir le `.dmg`, puis glisser **GitJournal.app** dans **Applications**.
+   Si vous disposez directement du `.app`, le copier dans **Applications**.
+3. Lancer GitJournal depuis **Applications**.
+
+Utiliser un paquet construit pour votre Mac : Apple Silicon ou Intel.
+La signature et la notarisation macOS ne sont pas configurées dans le projet ;
+un paquet local non signé peut être bloqué par macOS.
+
+### Fedora
+
+Depuis le dossier contenant le RPM, remplacer `GitJournal-VERSION-ARCH.rpm`
+par son nom exact :
+
+```bash
+sudo dnf install ./GitJournal-VERSION-ARCH.rpm
+```
+
+DNF installe aussi les dépendances déclarées, dont Git, GTK et WebKitGTK.
+Lancer ensuite **GitJournal** depuis le menu des applications, ou avec
+`gitjournal-desktop` dans un terminal.
+
+### Debian et Ubuntu
+
+Depuis le dossier contenant le DEB, remplacer `GitJournal_VERSION_ARCH.deb`
+par son nom exact :
+
+```bash
+sudo apt update
+sudo apt install ./GitJournal_VERSION_ARCH.deb
+```
+
+APT installe les dépendances déclarées, dont Git, GTK et WebKitGTK 4.1.
+Lancer ensuite **GitJournal** depuis le menu des applications, ou avec
+`gitjournal-desktop` dans un terminal.
+
+Le paquet doit être construit sur une base compatible avec la distribution cible.
+Un DEB construit sous Fedora ne constitue pas une validation de compatibilité Debian.
+Les autres distributions Linux nécessitent un paquet et des bibliothèques adaptés ;
+aucune installation universelle Linux n’est fournie.
+
+### Ouvrir votre journal après installation
+
+Dans GitJournal, choisir **Fichier > Ouvrir projet** (`Ctrl+O`, ou `Cmd+O` sur macOS),
+puis sélectionner le `.gitj` situé dans le dépôt local, y compris dans un sous-dossier
+comme `doc/Journal/p_fun.gitj`. Aucun accès GitHub n’est nécessaire pour lire les commits.
+
+### État des validations
+
+L’application a été exécutée sous **Fedora 44 x86_64**. Les paquets RPM et DEB ont été
+construits et inspectés, mais leur installation n’a pas été testée. Les installations
+Windows, macOS et Debian/Ubuntu restent à valider ; les instructions correspondantes
+s’appuient sur les formats configurés et la documentation Tauri.
+Références : [installateurs Windows](https://v2.tauri.app/distribute/windows-installer/),
+[DMG macOS](https://v2.tauri.app/distribute/dmg/) et
+[paquets Debian](https://v2.tauri.app/distribute/debian/).
+
+## Compiler depuis les sources
+
+La compilation se fait sur le système cible : Windows pour Windows, macOS pour macOS,
+Linux pour Linux. Les scripts du projet ne configurent pas de compilation croisée.
+
+### 1. Installer les outils de développement
+
+Installer [Node.js 24](https://nodejs.org/), [pnpm](https://pnpm.io/installation),
+[Rust stable avec Cargo](https://www.rust-lang.org/tools/install) et Git.
+Vérifier qu’ils sont accessibles avec `node --version`, `pnpm --version`,
+`cargo --version` et `git --version`.
+
+Ajouter les dépendances propres au système :
+
+- **Windows** : Microsoft C++ Build Tools avec la charge **Développement Desktop en C++**,
+  Rust avec la cible MSVC et WebView2. La génération du MSI nécessite aussi la
+  fonctionnalité Windows VBScript.
+- **macOS** : outils Xcode Command Line Tools (`xcode-select --install`).
+- **Fedora** : installer les paquets ci-dessous.
+
+```bash
+sudo dnf install git gcc gcc-c++ make pkgconf-pkg-config webkit2gtk4.1-devel openssl-devel librsvg2-devel libappindicator-gtk3-devel libxdo-devel
+```
+
+Sur **Debian/Ubuntu**, utiliser :
+
+```bash
+sudo apt update
+sudo apt install git build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev libxdo-dev
+```
+
+Les noms et la disponibilité des paquets dépendent de la version de la distribution.
+Consulter les [prérequis officiels Tauri](https://v2.tauri.app/start/prerequisites/)
+et [src/BUILD.md](src/BUILD.md) pour les détails.
+
+### 2. Préparer et lancer le projet
+
+Depuis la racine de votre copie des sources :
 
 ```bash
 pnpm install
-```
-
-### 2. Lancer l'application
-
-```bash
 pnpm start
 ```
+
+`pnpm start` lance l’application en développement ; cette commande ne l’installe pas
+dans le système.
+
+### 3. Construire et installer un paquet
+
+Exécuter la commande correspondant au système de compilation :
+
+```bash
+pnpm build:win    # depuis Windows : .exe et .msi
+pnpm build:mac    # depuis macOS : .app et .dmg
+pnpm build:linux  # depuis Linux : .deb et .rpm
+```
+
+Chaque commande lance les tests avant de construire les paquets. Choisir ensuite
+l’artefact dans `src-tauri/target/release/bundle/` et suivre les instructions
+d’installation de votre système ci-dessus. Reconstruire le paquet après une mise
+à jour des sources pour inclure les dernières corrections.
 
 ## Utilisation
 
