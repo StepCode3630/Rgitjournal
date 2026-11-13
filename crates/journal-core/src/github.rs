@@ -162,7 +162,7 @@ pub fn read_comments(base: &str, project: &Value, token: &str) -> Result<Vec<Val
         .map_err(|e| e.to_string())?;
     let since = project["journalStartDate"]
         .as_str()
-        .map(chrono::DateTime::parse_from_rfc3339)
+        .map(crate::project::parse_date)
         .transpose()
         .map_err(|_| "Date de début invalide")?;
     if let Some(since) = since {

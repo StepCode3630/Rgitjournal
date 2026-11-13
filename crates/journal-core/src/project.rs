@@ -3,6 +3,15 @@ use std::{fs, io::Write, path::Path};
 
 pub type Result<T> = std::result::Result<T, String>;
 
+pub fn parse_date(date: &str) -> Result<chrono::DateTime<chrono::FixedOffset>> {
+    chrono::DateTime::parse_from_rfc3339(date)
+        .or_else(|_| {
+            chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+                .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().fixed_offset())
+        })
+        .map_err(|_| "Date invalide (ISO 8601 attendue)".into())
+}
+
 pub fn validate(p: &Value) -> Result<()> {
     if !p.is_object() || !p["projectName"].is_string() {
         return Err("Projet invalide : nom de projet requis".into());
@@ -15,7 +24,7 @@ pub fn validate(p: &Value) -> Result<()> {
         return Err("Projet invalide : auteurs, colonnes et exceptions requis".into());
     }
     if let Some(date) = p["journalStartDate"].as_str() {
-        chrono::DateTime::parse_from_rfc3339(date).map_err(|_| "Date de début invalide")?;
+        parse_date(date)?;
     }
     Ok(())
 }
@@ -80,5 +89,16 @@ mod tests {
         save(&path, &p).unwrap();
         assert_eq!(load(&path).unwrap(), p);
         assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn existing_documented_project_and_date_only_start_are_supported() {
+        let project: Value =
+            serde_json::from_str(include_str!("../../../doc/gitjournal.gitj")).unwrap();
+        validate(&project).unwrap();
+        assert_eq!(
+            parse_date("2026-01-01").unwrap().to_rfc3339(),
+            "2026-01-01T00:00:00+00:00"
+        );
     }
 }
