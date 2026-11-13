@@ -4,6 +4,18 @@ use std::{fs, io::Write, path::Path};
 pub type Result<T> = std::result::Result<T, String>;
 
 pub fn parse_date(date: &str) -> Result<chrono::DateTime<chrono::FixedOffset>> {
+    // Les anciens formulaires datetime-local enregistraient parfois une date
+    // sans fuseau. Comme JavaScript, l’interpréter dans le fuseau de la machine.
+    for format in ["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S%.f"] {
+        if let Ok(local) = chrono::NaiveDateTime::parse_from_str(date, format) {
+            use chrono::TimeZone;
+            return chrono::Local
+                .from_local_datetime(&local)
+                .earliest()
+                .map(|d| d.fixed_offset())
+                .ok_or_else(|| "Date locale inexistante dans le fuseau système".into());
+        }
+    }
     chrono::DateTime::parse_from_rfc3339(date)
         .or_else(|_| {
             chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
@@ -55,7 +67,13 @@ pub fn validate(p: &Value) -> Result<()> {
 
 pub fn load(path: &Path) -> Result<Value> {
     let data = fs::read(path).map_err(|e| format!("Lecture du projet : {e}"))?;
-    let p = serde_json::from_slice(&data).map_err(|e| format!("JSON du projet invalide : {e}"))?;
+    let mut p: Value =
+        serde_json::from_slice(&data).map_err(|e| format!("JSON du projet invalide : {e}"))?;
+    // Les projets antérieurs aux colonnes configurables utilisent le tableau
+    // standard. Migration en mémoire uniquement : ouvrir ne réécrit pas le fichier.
+    if p.is_object() && p.get("columns").is_none() {
+        p["columns"] = new_project()["columns"].clone();
+    }
     validate(&p)?;
     Ok(p)
 }
@@ -173,6 +191,58 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["label", "source", "format", "field"]
         );
+    }
+
+    #[test]
+    fn legacy_project_without_columns_opens_without_rewriting_original() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ancien.gitj");
+        let original = br#"{"repoUrl":"https://example.invalid/old/repo","projectName":"Ancien","branch":"old","me":"Alice","journalStartDate":null,"exceptions":[{"id":"manual","type":"commitless","author":"Alice","date":"2026-01-02T12:00:00Z","name":"Meeting","duration":30}]}"#;
+        fs::write(&path, original).unwrap();
+        let p = load(&path).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert_eq!(p["columns"], new_project()["columns"]);
+        let before: Value = serde_json::from_slice(original).unwrap();
+        for (key, value) in before.as_object().unwrap() {
+            assert_eq!(&p[key], value);
+        }
+        save(&path, &p).unwrap();
+        assert_eq!(load(&path).unwrap(), p);
+    }
+
+    #[test]
+    fn legacy_datetime_local_is_accepted_and_preserved() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("date-locale.gitj");
+        for date in ["2026-01-02T12:34", "2026-01-02T12:34:56.789"] {
+            let mut p = new_project();
+            p["me"] = json!("Alice");
+            p["exceptions"] = json!([{
+                "type":"commitless", "id":"manual", "date":date, "duration":30
+            }]);
+            save(&path, &p).unwrap();
+            assert_eq!(load(&path).unwrap()["exceptions"][0]["date"], date);
+            assert_eq!(
+                parse_date(date).unwrap().naive_local(),
+                chrono::NaiveDateTime::parse_from_str(date, "%Y-%m-%dT%H:%M:%S%.f")
+                    .or_else(|_| chrono::NaiveDateTime::parse_from_str(date, "%Y-%m-%dT%H:%M"))
+                    .unwrap()
+            );
+        }
+        assert!(parse_date("2026-02-30T12:34").is_err());
+    }
+
+    #[test]
+    fn explicit_invalid_columns_are_not_replaced() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("invalide.gitj");
+        for columns in [json!(null), json!([]), json!("invalid")] {
+            let mut p = new_project();
+            p["me"] = json!("Alice");
+            p["columns"] = columns;
+            fs::write(&path, serde_json::to_vec(&p).unwrap()).unwrap();
+            assert!(load(&path).is_err());
+        }
     }
     #[test]
     fn roundtrip_preserves_unknown_fields_and_replaces_file() {

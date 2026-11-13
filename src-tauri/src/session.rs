@@ -192,6 +192,36 @@ mod tests {
         assert_eq!(s.project, previous);
     }
     #[test]
+    fn legacy_project_in_subdirectory_opens_and_saves_without_data_loss() {
+        let dir = tempfile::tempdir().unwrap();
+        let folder = dir.path().join("doc/Journal");
+        fs::create_dir_all(&folder).unwrap();
+        let file = folder.join("ancien.gitj");
+        let original = json!({
+            "repoUrl":"https://example.invalid/legacy",
+            "projectName":"Ancien", "branch":"old", "me":"Alice",
+            "journalStartDate":null,
+            "exceptions":[{"id":"manual", "type":"commitless", "author":"Alice",
+                "date":"2026-01-02T12:00:00Z", "name":"Meeting", "duration":30}]
+        });
+        let bytes = serde_json::to_vec_pretty(&original).unwrap();
+        fs::write(&file, &bytes).unwrap();
+        let mut s = Session::new(dir.path().join("config/settings.json"), None).unwrap();
+        let loaded = s.open(&file).unwrap();
+        assert_eq!(fs::read(&file).unwrap(), bytes);
+        assert_eq!(loaded["columns"], project::new_project()["columns"]);
+        let entry = loaded["exceptions"][0].clone();
+        s.update(&entry, &json!({"duration":45})).unwrap();
+        let saved = project::load(&file).unwrap();
+        assert_eq!(saved["exceptions"][0]["duration"], 45);
+        assert_eq!(saved["exceptions"][0]["name"], "Meeting");
+        for key in ["repoUrl", "branch", "me", "journalStartDate", "projectName"] {
+            assert_eq!(saved[key], original[key]);
+        }
+        assert_eq!(saved["columns"], loaded["columns"]);
+    }
+
+    #[test]
     fn legacy_preferences_are_read_without_mutating_original() {
         let dir = tempfile::tempdir().unwrap();
         let legacy = dir.path().join("old.json");

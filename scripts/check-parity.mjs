@@ -99,8 +99,23 @@ try {
   actual.stats.gitUsers.sort();
   assert.deepEqual(actual.stats, expected.stats);
   assert.equal(actual.remoteBaseUrl, expected.remoteBaseUrl);
+  // Ancien projet situé sous doc/Journal : aucune colonne, ancien repoUrl et
+  // branche obsolète. Les commits viennent toujours du dépôt local contenant le fichier.
+  const nestedDirectory = path.join(dir, "doc", "Journal é");
+  fs.mkdirSync(nestedDirectory, { recursive: true });
+  const nestedFile = path.join(nestedDirectory, "ancien.gitj");
+  const { columns, ...legacy } = project;
+  legacy.repoUrl = "https://example.invalid/never-contact-this-repository";
+  legacy.branch = "nonexistent-branch";
+  const original = JSON.stringify(legacy, null, 2);
+  fs.writeFileSync(nestedFile, original);
+  const nested = JSON.parse(
+    execFileSync(executable, [nestedDirectory, nestedFile], { encoding: "utf8" }),
+  );
+  assert.deepEqual(nested, actual);
+  assert.equal(fs.readFileSync(nestedFile, "utf8"), original);
   console.log(
-    "Parité Git JS/Rust validée : branches, auteurs, date, parsing, exclusions, modifications, entrées manuelles et statistiques.",
+    "Parité Git JS/Rust validée : branches, auteurs, date, parsing, exclusions, modifications, entrées manuelles, statistiques et ancien projet dans un sous-dossier.",
   );
 } finally {
   fs.rmSync(dir, { recursive: true, force: true });

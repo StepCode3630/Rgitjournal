@@ -28,13 +28,13 @@ pnpm start
 ### Créer un nouveau projet
 
 1. Menu : **Fichier > Nouveau projet** (`Cmd+N` / `Ctrl+N`)
-2. Choisir où sauvegarder le fichier `.gitj` — **le placer à la racine du dépôt git à analyser**
+2. Choisir où sauvegarder le fichier `.gitj` — **dans le dépôt Git à analyser, à la racine ou dans un sous-dossier**, par exemple `doc/Journal/mon-projet.gitj`
 3. Remplir le formulaire :
    - **Nom du projet** : affiché dans le journal et l'export
    - **Nom(s) d'utilisateur Git** : valeur(s) qui apparaissent dans `git log --author=…` (filtre vos commits). Séparer plusieurs noms par une virgule ou un point-virgule.
    - **Date de début** : optionnel, ignore les commits antérieurs
 
-> L'application utilise le dossier du fichier `.gitj` comme racine du dépôt git. L'URL GitHub (pour les liens de commits) est détectée automatiquement via `git remote get-url origin`.
+> Git retrouve le dépôt parent à partir du dossier du fichier `.gitj`. Les commits sont lus localement, sans téléchargement depuis GitHub. L'URL des liens de commits est détectée via `git remote get-url origin`.
 
 ### Format du fichier `.gitj`
 
@@ -61,7 +61,7 @@ pnpm start
 | `projectName` | oui | Nom affiché dans le journal |
 | `me` | oui | Nom d'auteur git, ou liste de noms, pour filtrer vos commits |
 | `journalStartDate` | non | Date de début, format ISO 8601 |
-| `columns` | oui | Colonnes affichées dans le journal |
+| `columns` | non pour les anciens fichiers | Colonnes affichées ; le bureau utilise les colonnes standard si ce champ est absent |
 | `exceptions` | oui | Entrées manuelles et modifications de commits |
 | `includeIssues` | non | `true` pour ajouter les commentaires d'issues dans l'application (défaut : `false`) |
 | `githubUsers` | non | Logins GitHub supplémentaires pour filtrer les commentaires d'issues |
@@ -87,6 +87,15 @@ Pour afficher une liste déroulante dans le formulaire d'ajout ou de modificatio
 ### Ouvrir un projet existant
 
 Menu : **Fichier > Ouvrir projet** (`Cmd+O` / `Ctrl+O`)
+
+Vous pouvez ouvrir un fichier placé dans un sous-dossier, par exemple
+`P_FUN/doc/Journal/p_fun.gitj`. Les anciens fichiers sans `columns` sont pris en
+charge : les colonnes standard sont ajoutées en mémoire, puis enregistrées lors
+de la prochaine sauvegarde ou modification. L’ouverture seule ne réécrit pas le
+fichier. Les propriétés historiques `repoUrl` et `branch` sont conservées ; elles
+ne remplacent pas la lecture des commits du dépôt local contenant le fichier.
+Les dates d’entrées anciennes sans fuseau (`2026-01-02T12:34`) sont également
+acceptées et conservées ; elles sont interprétées dans le fuseau de la machine.
 
 ### Format des messages de commit
 
@@ -264,7 +273,7 @@ Les artefacts sont générés dans `src-tauri/target/release/bundle/`.
 
 ### Le journal est vide
 
-- Vérifier que le fichier `.gitj` est bien placé **à la racine du dépôt git**
+- Vérifier que le fichier `.gitj` est bien placé **dans le dépôt Git**, à la racine ou dans un sous-dossier
 - Vérifier que le champ `me` correspond exactement au nom d'auteur dans vos commits (`git log --author=…`)
 - Vérifier que vos commits contiennent une durée entre crochets
 

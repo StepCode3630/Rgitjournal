@@ -120,7 +120,7 @@ function render() {
     : "Journal de travail";
   $("subtitle").textContent = project
     ? `${Array.isArray(project.me) ? project.me.join(" / ") : project.me}${project.journalStartDate ? " — Depuis le " + new Date(project.journalStartDate).toLocaleDateString("fr-CH") : ""}`
-    : "Ouvrez un projet .gitj ou créez un projet à la racine de votre dépôt.";
+    : "Ouvrez ou créez un projet .gitj dans votre dépôt Git, à la racine ou dans un sous-dossier.";
   $("add").hidden = !project;
   $("journal").replaceChildren();
   if (!project) return;
@@ -408,7 +408,7 @@ const actions = {
       [
         node(
           "p",
-          "Placez le fichier .gitj à la racine du dépôt. Les commits de toutes les branches sont filtrés par auteur et date. Les durées proviennent exclusivement des métadonnées déclarées.",
+          "Placez le fichier .gitj dans le dépôt, à la racine ou dans un sous-dossier (par exemple doc/Journal). Git retrouve automatiquement le dépôt parent. Les commits locaux de toutes les branches sont filtrés par auteur et date. Les durées proviennent exclusivement des métadonnées déclarées.",
         ),
         node(
           "p",

@@ -33,7 +33,7 @@ pnpm test:parity
 pnpm build
 ```
 
-La suite comporte 54 tests JavaScript, 14 tests du cœur Rust et 5 tests du bureau.
+La suite comporte 54 tests JavaScript, 17 tests du cœur Rust et 6 tests du bureau.
 Le corpus `doc/fixtures/metadata.json` contient des données synthétiques et ne
 représente jamais des événements de journal réels. Les tests de parité créent des
 commits dans un dépôt temporaire puis le suppriment.
@@ -54,6 +54,14 @@ vérifier directement `src-tauri/target/release/gitjournal-desktop`.
   à l’ouverture : la sauvegarde ne réorganise plus ses champs.
   Ce format ne change pas la collecte : les commits sont lus dans le dépôt local,
   sans appel à GitHub. Les commentaires restent une option distincte (`includeIssues`).
+- Les anciens projets sans `columns` reçoivent les colonnes standard en mémoire.
+  L’ouverture ne réécrit pas le fichier ; les champs historiques et exceptions restent
+  intacts. Un test de session couvre leur ouverture puis leur modification/sauvegarde.
+  Le test de parité couvre aussi un `.gitj` sous `doc/Journal é`, sans colonnes,
+  avec un ancien `repoUrl` inaccessible et une branche inexistante : mêmes commits
+  locaux, exceptions et statistiques que depuis la racine.
+  Les dates historiques `datetime-local` sans fuseau sont acceptées et conservées
+  textuellement ; leur interprétation utilise le fuseau système, comme JavaScript.
 - Les regex des colonnes restent en JavaScript ; elles ne sont pas traduites vers une autre grammaire.
 - Le bureau garde son regroupement UTC, le Markdown CLI son fuseau configurable Europe/Zurich.
 - Le CSV reprend les colonnes affichées. La colonne « Tâche (abrégé) » annoncée dans
