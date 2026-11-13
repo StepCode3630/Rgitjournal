@@ -1,33 +1,73 @@
-# Parité de la migration de bureau
+# Parité du bureau Tauri
 
-Référence : application Electron 4.1.1, commit `0cebde7`.
-Electron reste disponible tant que tous les critères ci-dessous ne sont pas validés.
-La CLI et l'action JavaScript restent indépendantes et fonctionnelles.
+Référence : Electron 4.1.1 (`0cebde7`), début du portage Rust `b6b771b`.
+Le bureau utilise désormais Rust/Tauri et un frontend statique, sans Express,
+Electron ni processus Node auxiliaire. La CLI et l’action GitHub gardent leur moteur
+JavaScript ; cette coexistence est volontaire et contrôlée par des tests de parité.
 
-| Tranche | Critères d'acceptation | État |
-|---|---|---|
-| Parsing | Formats compact/classique, minutes implicites, casse conservée, première ligne reconnue, titre et description préservés ; corpus partagé JS/Rust | En cours |
-| Git | Toutes branches hors tags/stash, déduplication SHA, filtres auteurs/date, dates d'auteur, liens origin, exclusion bots, seulement durées positives | À migrer |
-| Erreurs | Distinguer dépôt vide, chemin invalide, Git absent et échec de commande ; aucun historique inventé | À migrer |
-| Interface | Colonnes configurables, regex JS, champs select/dropdown, groupes UTC actuels, totaux, descriptions condensées et échappées, aide/statistiques | À migrer |
-| Projets | Nouveau/ouvrir/enregistrer, .gitj existants et champs inconnus conservés, exclusions SHA, modifications et entrées manuelles | À migrer |
-| Intégration | Menus/raccourcis, zoom, dialogues, ouverture de .gitj par le système, liens externes limités à HTTP(S) | À migrer |
-| Persistance | Sauvegarde automatique et finale, écriture sûre dans le dossier cible, dernier projet, préférences et migration des anciennes préférences | À migrer |
-| GitHub | Pagination, issues et conversations PR, filtre login/date, commentaires sans durée, lecture seule, erreurs visibles, token préférences/env/gh | À migrer |
-| CSV | Colonnes du tableau, échappement guillemets/virgules/retours, BOM UTF-8 et CRLF | À migrer |
-| PDF/impression | Export A4 paysage et impression du journal complet, caractères Unicode, pagination et totaux ; essai réel Fedora | À migrer |
-| Distribution | Tests et construction Fedora ; CI Windows/macOS sans publication ; limites explicitement documentées | À migrer |
+## Critères et preuves
 
-La colonne CSV « Tâche (abrégé) » annoncée par le README est absente du code de référence.
-Le Markdown CLI groupe en Europe/Zurich, contrairement à l'interface UTC : ne pas modifier implicitement ces conventions.
-Les erreurs Git actuellement masquées seront corrigées explicitement, sans confondre erreur et journal vide.
+| Fonctionnalité | État et vérification |
+|---|---|
+| Parsing | Corpus partagé JS/Rust : formats compact/classique, minutes implicites, casse et espaces JavaScript, caractères spéciaux ; première métadonnée reconnue et texte voisin conservés |
+| Git | Comparaison réelle JS/Rust sur dépôt temporaire : branches, auteurs, date, déduplication, bots, durées, liens, exclusions, modifications et entrées manuelles |
+| Erreurs | Dépôt vide distingué d’un chemin invalide ou d’un échec Git ; erreurs affichées explicitement |
+| Interface | Modèle testé : regex JavaScript/groupes, regroupement UTC, totaux, CSV ; parcours graphique Fedora : tableau, formulaires, aide et statistiques |
+| Projets | `.gitj` existants, date de début seule, champs inconnus préservés ; chargement/sauvegarde/édition/suppression testés ; création native testée sous Fedora |
+| Intégration | Menus et raccourcis, titre du projet, zoom, liens HTTP(S), arguments chemin/URI ; association MIME Linux et métadonnées Windows/macOS dans les paquets |
+| Persistance | Écriture atomique dans le dossier cible ; autosave, échec d’écriture, restauration, migration des préférences sans modification du fichier ancien testés ; fermeture attend les écritures |
+| GitHub | Tests HTTP locaux : authentification factice, pagination, protection de l’origine, 401/403/404, quotas ; filtres auteur/date, PR et commentaires sans durée ; commentaires en lecture seule |
+| CSV | BOM UTF-8, CRLF, guillemets, virgules et retours à la ligne testés ; export depuis la fenêtre réelle puis contenu vérifié |
+| PDF | A4 paysage, pagination et en-têtes répétés ; extraction Unicode accentuée avec Poppler ; export depuis la fenêtre réelle ; renvois HTTP(S) conservés |
+| Impression | Dialogue système ouvert et annulé sous Fedora ; aucune impression physique lancée |
+| Distribution | Binaire optimisé et paquets RPM/DEB construits sous Fedora ; dépendance Git, fichier desktop, MIME et licences inspectés ; CI Linux/Windows/macOS sans publication ajoutée |
 
-Le cœur Rust sera indépendant de Tauri ; le frontend web appellera des commandes de domaine.
-Aucun processus Node n'est prévu pour l'application finale. La duplication temporaire du
-parsing JavaScript/Rust sert à vérifier la parité tout en conservant la CLI.
+## Commandes reproductibles
 
-## Vérification du cœur
+Depuis la racine :
 
-Depuis la racine : `cargo test --manifest-path crates/journal-core/Cargo.toml`.
-Le corpus `doc/fixtures/metadata.json` est aussi vérifié par `pnpm test`.
-Le corpus contient des données synthétiques de test, jamais des événements de journal réels.
+```bash
+pnpm test
+pnpm test:rust
+pnpm test:parity
+pnpm build
+```
+
+La suite comporte 54 tests JavaScript, 12 tests du cœur Rust et 5 tests du bureau.
+Le corpus `doc/fixtures/metadata.json` contient des données synthétiques et ne
+représente jamais des événements de journal réels. Les tests de parité créent des
+commits dans un dépôt temporaire puis le suppriment.
+
+Le script `scripts/test-desktop-fedora.py` effectue le parcours graphique avec
+un dépôt et des préférences temporaires. Voir `src/BUILD.md` pour les prérequis et
+les conditions d’exécution. Un chemin de binaire peut être passé en argument pour
+vérifier directement `src-tauri/target/release/gitjournal-desktop`.
+
+## Décisions et écarts explicites
+
+- Les erreurs Git étaient masquées par une liste vide : le bureau les signale désormais.
+- Le format `.gitj`, ses champs personnalisés et les sources des entrées sont préservés.
+- Les regex des colonnes restent en JavaScript ; elles ne sont pas traduites vers une autre grammaire.
+- Le bureau garde son regroupement UTC, le Markdown CLI son fuseau configurable Europe/Zurich.
+- Le CSV reprend les colonnes affichées. La colonne « Tâche (abrégé) » annoncée dans
+  l’ancien README n’existait pas dans le code de référence et n’a pas été inventée.
+- Le PDF a une mise en page propre au moteur Rust, avec les mêmes cellules visibles,
+  les totaux et les renvois. Il n’utilise plus le moteur d’impression Chromium.
+- Noto Sans est embarquée sous OFL ; les autres caractères utilisent les polices système.
+  Une police manquante produit une erreur explicite plutôt qu’une perte silencieuse de texte.
+- Les préférences Tauri sont séparées des anciennes préférences Electron ; ces dernières
+  sont lues au premier lancement et restent intactes.
+- Les paquets Linux par défaut sont DEB et RPM, pour les familles Debian et Fedora.
+  L’AppImage reste une option du CLI Tauri, non validée ici.
+
+## Limites de validation
+
+Validation locale : Fedora 44 x86_64, GTK 3.24 et WebKitGTK 2.54. Les paquets n’ont pas
+été installés sur le système de l’utilisateur. Le binaire optimisé a été exécuté directement.
+Aucune imprimante physique n’a été utilisée. Les interactions GitHub ont été testées
+avec un serveur simulé, sans compte privé ni token réel.
+
+Windows 10/11, macOS et Debian n’ont pas été exécutés localement. La CI ajoutée compile
+et teste les trois systèmes, mais n’a pas été déclenchée depuis cette session. Les essais
+graphiques Windows/macOS, signatures et installations natives restent donc à effectuer.
+Aucun push, tag, release ou déploiement n’est effectué par la migration.

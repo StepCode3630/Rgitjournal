@@ -1,75 +1,29 @@
 {
   "name": "GitJournal",
   "version": "4.1.1",
-  "description": "Journal de travail Git - Application Electron",
-  "main": "src/main.js",
+  "description": "Journal de travail Git — Bureau Tauri/Rust et CLI JavaScript",
   "bin": {
     "gitjournal": "src/cli.js"
   },
   "type": "module",
   "scripts": {
-    "start": "electron .",
-    "dev": "NODE_ENV=development electron .",
-    "test": "node --test src/server/server.test.js src/server/journal.test.js",
+    "start": "node scripts/build-desktop.mjs && cargo run --manifest-path src-tauri/Cargo.toml",
+    "dev": "node scripts/build-desktop.mjs && tauri dev",
+    "test": "node --test src/server/server.test.js src/server/journal.test.js desktop/model.test.js",
     "journal": "node src/cli.js",
-    "build": "pnpm test && electron-builder",
-    "build:mac": "pnpm test && electron-builder --mac",
-    "build:win": "pnpm test && electron-builder --win",
-    "build:linux": "pnpm test && electron-builder --linux",
+    "test:rust": "node scripts/build-desktop.mjs && cargo test --locked --manifest-path crates/journal-core/Cargo.toml && cargo test --locked --manifest-path src-tauri/Cargo.toml",
+    "test:parity": "cargo build --locked --manifest-path crates/journal-core/Cargo.toml --example snapshot && node scripts/check-parity.mjs",
     "desktop:prepare": "node scripts/build-desktop.mjs",
-    "desktop:dev": "node scripts/build-desktop.mjs && cargo run --manifest-path src-tauri/Cargo.toml",
-    "desktop:check": "node scripts/build-desktop.mjs && cargo check --manifest-path src-tauri/Cargo.toml",
+    "desktop:dev": "pnpm start",
+    "desktop:check": "node scripts/build-desktop.mjs && cargo check --locked --manifest-path src-tauri/Cargo.toml",
     "test:desktop": "node --test desktop/model.test.js",
-    "desktop:build": "node scripts/build-desktop.mjs && tauri build"
-  },
-  "dependencies": {
-    "ejs": "^3.1.10",
-    "express": "^4.19.2",
-    "express-ejs-layouts": "^2.5.1",
-    "node-fetch": "^3.3.2"
+    "desktop:build": "node scripts/build-desktop.mjs && node scripts/build-native.mjs",
+    "build": "pnpm test && pnpm test:rust && pnpm desktop:build",
+    "build:linux": "pnpm test && pnpm test:rust && node scripts/build-desktop.mjs && node scripts/build-native.mjs linux",
+    "build:mac": "pnpm test && pnpm test:rust && node scripts/build-desktop.mjs && node scripts/build-native.mjs darwin",
+    "build:win": "pnpm test && pnpm test:rust && node scripts/build-desktop.mjs && node scripts/build-native.mjs win32"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.4",
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.0"
-  },
-  "build": {
-    "appId": "com.gitjournal.app",
-    "productName": "GitJournal",
-    "files": [
-      "src/main.js",
-      "src/preload.js",
-      "src/version.js",
-      "src/settings.html",
-      "src/new-project.html",
-      "src/server/**/*",
-      "src/assets/**/*"
-    ],
-    "directories": {
-      "output": "dist",
-      "buildResources": "src/assets"
-    },
-    "mac": {
-      "icon": "src/assets/icon.icns",
-      "category": "public.app-category.productivity",
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "win": {
-      "icon": "src/assets/icon.ico",
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "linux": {
-      "icon": "src/assets/icon.png",
-      "target": [
-        "AppImage",
-        "deb"
-      ]
-    }
+    "@tauri-apps/cli": "^2.12.4"
   }
 }

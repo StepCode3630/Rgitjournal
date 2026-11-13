@@ -1,10 +1,6 @@
 # GitJournal
 
-Migration du bureau vers Tauri/Rust en cours : voir [les critères de parité](doc/tauri-parity.md).
-Le cœur se vérifie avec `cargo test --manifest-path crates/journal-core/Cargo.toml`.
-Rust est nécessaire uniquement pour cette nouvelle tranche ; Electron et la CLI restent disponibles.
-
-Application Electron pour générer un journal de travail à partir des commits Git locaux et des commentaires d'issues GitHub.
+Application de bureau Tauri/Rust pour générer un journal de travail à partir des commits Git locaux et des commentaires d'issues GitHub.
 
 Le même moteur est disponible en ligne de commande et comme GitHub Action, pour tenir un `journal.md` à jour automatiquement (voir [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)).
 
@@ -12,8 +8,12 @@ Le même moteur est disponible en ligne de commande et comme GitHub Action, pour
 
 ### 1. Installer les dépendances
 
+Pour développer : Node.js 24, pnpm, Rust stable et Git, ainsi que les
+[prérequis système propres à votre plateforme](src/BUILD.md).
+L’application distribuée ne nécessite ni Node.js ni Electron ; Git reste requis.
+
+
 ```bash
-cd src
 pnpm install
 ```
 
@@ -163,13 +163,18 @@ Cliquer sur une ligne du tableau pour ouvrir le formulaire de modification.
 | Exporter en CSV | `Cmd+Shift+E` / `Ctrl+Shift+E` |
 | Imprimer | `Cmd+P` / `Ctrl+P` |
 
-Le CSV contient une colonne supplémentaire "Tâche (abrégé)" : texte extrait du nom du commit avant la première parenthèse ouvrante.
+Le CSV reprend les colonnes et le texte affichés, en UTF-8 avec BOM et fins de ligne CRLF.
+Le PDF est généré en Rust au format A4 paysage, avec pagination et en-têtes répétés.
+L’impression passe par le dialogue système ; aucune impression n’est lancée sans confirmation.
 
 ### Sauvegarder
 
 Menu : **Fichier > Enregistrer** (`Cmd+S` / `Ctrl+S`)
 
-Les modifications sont aussi sauvegardées automatiquement après chaque ajout ou modification.
+Les ajouts, modifications, exclusions et suppressions sont enregistrés immédiatement.
+En cas d’échec d’écriture, l’erreur reste visible et l’état enregistré n’est pas remplacé.
+Les écritures utilisent un temporaire dans le dossier cible et la fermeture attend les écritures en cours.
+Le menu **Configuration** permet d’éditer le JSON du `.gitj`, y compris les colonnes personnalisées.
 
 ## Journal automatique avec GitHub Actions
 
@@ -231,45 +236,31 @@ git push
 Voir [src/BUILD.md](src/BUILD.md) pour les instructions détaillées.
 
 ```bash
-cd src
-pnpm dev          # mode développement (DevTools ouvert)
+pnpm dev          # mode développement Tauri
 pnpm test         # lancer les tests
 pnpm build        # build pour la plateforme courante
-pnpm build:mac    # .dmg macOS
-pnpm build:win    # .exe Windows
-pnpm build:linux  # .AppImage / .deb Linux
+pnpm build:mac    # .app / .dmg, depuis macOS
+pnpm build:win    # NSIS / MSI, depuis Windows
+pnpm build:linux  # .deb / .rpm, depuis Linux
 ```
 
-Les artefacts sont générés dans `src/dist/`.
+Les artefacts sont générés dans `src-tauri/target/release/bundle/`.
 
 ## Structure du projet
 
-```
-src/
-├── main.js                 # Main process Electron
-├── cli.js                  # Génération Markdown en ligne de commande (GitHub Action)
-├── preload.js              # Bridge IPC sécurisé
-├── version.js              # Numéro de version
-├── package.json
-├── assets/                 # Icônes de l'application
-└── server/
-    ├── server.js           # Serveur Express interne
-    ├── lib/
-    │   ├── commit-parser.js    # Parsing des métadonnées (commits et commentaires)
-    │   ├── issue-reader.js     # Lecture des commentaires d'issues (API GitHub)
-    │   ├── journal-generator.js # Collecte des entrées (commits, issues, exceptions)
-    │   ├── markdown-export.js  # Rendu du journal Markdown
-    │   ├── gitj-manager.js     # Lecture/écriture des fichiers .gitj
-    │   └── settings-manager.js # Persistance des préférences
-    └── views/              # Templates EJS
-```
+- `crates/journal-core/` : parsing, collecte Git, exceptions, projets et commentaires GitHub en Rust.
+- `src-tauri/` : fenêtre, menus, commandes IPC, préférences, dialogues et export PDF.
+- `desktop/` : interface HTML/CSS/JavaScript statique, sans serveur HTTP.
+- `scripts/` : préparation des ressources, packaging natif et vérifications de parité.
+- `src/cli.js` et `src/server/lib/` : CLI et moteur JavaScript conservés pour GitHub Actions.
+- `doc/tauri-parity.md` : critères, preuves de validation et limites de plateforme.
 
 ## Dépannage
 
 ### L'app ne démarre pas
 
-- Vérifier que les dépendances sont installées (`pnpm install` dans `src/`)
-- Consulter les logs dans la console de développement (`pnpm dev`)
+- Vérifier que les dépendances sont installées (`pnpm install` à la racine)
+- Consulter les erreurs du terminal (`pnpm start`) et vérifier les prérequis système
 
 ### Le journal est vide
 
@@ -285,12 +276,22 @@ src/
 
 Pour rapporter un bug ou demander une fonctionnalité, créer une issue sur GitHub.
 
-## Migration Tauri (en développement)
+## Préférences et compatibilité
 
-Depuis la racine, `pnpm desktop:dev` prépare les ressources et lance le bureau Rust/Tauri.
-`pnpm desktop:check` vérifie la compilation ; `pnpm test:desktop` vérifie le modèle web.
-La CLI JavaScript et `pnpm start` (Electron) restent disponibles pendant la validation.
-Les dépendances Rust sont téléchargées par Cargo : Tauri (fenêtre et IPC), rfd
-(dialogues système), reqwest/rustls (API GitHub HTTPS), tempfile (écritures atomiques),
-chrono (dates), printpdf (PDF sans processus Node). La police Noto Sans est embarquée
-avec sa licence pour les exports PDF.
+Les fichiers `.gitj` existants sont conservés, y compris leurs champs personnalisés.
+Les préférences Tauri sont dans le dossier de configuration de `com.gitjournal.desktop`.
+Au premier lancement, les anciennes préférences Electron de `GitJournal/settings.json`
+sont lues si aucune préférence Tauri n’existe. Le fichier d’origine reste intact.
+La priorité du token reste : préférences, `GH_TOKEN`, `GITHUB_TOKEN`, puis `gh auth token`.
+
+Les expressions régulières de colonnes restent exécutées en JavaScript, ce qui
+préserve les options et groupes de capture existants. Les erreurs Git sont désormais
+signalées explicitement au lieu de produire silencieusement un journal vide.
+Le regroupement du bureau reste en UTC ; le Markdown CLI garde son fuseau configurable.
+
+Pour les PDF, Noto Sans est embarquée sous licence OFL. Les autres caractères utilisent
+les polices système disponibles. Une police manquante produit une erreur explicite,
+avec possibilité d’utiliser le rendu système via **Imprimer**.
+
+Fedora 44 a été testé localement. Windows/macOS disposent d’une CI de compilation et
+de tests, sans publication ; son exécution et les essais graphiques natifs restent à faire.
