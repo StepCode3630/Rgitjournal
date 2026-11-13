@@ -1,0 +1,45 @@
+name: Desktop parity and compilation
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Linux build prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libxdo-dev libssl-dev poppler-utils
+      - name: JavaScript tests (CLI and frontend)
+        run: node --test src/server/server.test.js src/server/journal.test.js desktop/model.test.js
+      - name: Prepare static frontend
+        run: node scripts/build-desktop.mjs
+      - name: Rust formatting
+        run: |
+          cargo fmt --manifest-path crates/journal-core/Cargo.toml --check
+          cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - name: Core tests
+        run: cargo test --locked --manifest-path crates/journal-core/Cargo.toml
+      - name: Build parity probe
+        run: cargo build --locked --manifest-path crates/journal-core/Cargo.toml --example snapshot
+      - name: Compare JavaScript and Rust journal
+        run: node scripts/check-parity.mjs
+      - name: Desktop tests
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - name: Desktop Clippy
+        run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Compile desktop application
+        run: cargo build --locked --manifest-path src-tauri/Cargo.toml

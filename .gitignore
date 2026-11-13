@@ -17,3 +17,6 @@ target/
 
 # Windows debug symbols
 *.pdb
+
+# Generated Tauri schemas
+/src-tauri/gen/

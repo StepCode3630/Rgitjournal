@@ -284,3 +284,13 @@ src/
 ## Support
 
 Pour rapporter un bug ou demander une fonctionnalité, créer une issue sur GitHub.
+
+## Migration Tauri (en développement)
+
+Depuis la racine, `pnpm desktop:dev` prépare les ressources et lance le bureau Rust/Tauri.
+`pnpm desktop:check` vérifie la compilation ; `pnpm test:desktop` vérifie le modèle web.
+La CLI JavaScript et `pnpm start` (Electron) restent disponibles pendant la validation.
+Les dépendances Rust sont téléchargées par Cargo : Tauri (fenêtre et IPC), rfd
+(dialogues système), reqwest/rustls (API GitHub HTTPS), tempfile (écritures atomiques),
+chrono (dates), printpdf (PDF sans processus Node). La police Noto Sans est embarquée
+avec sa licence pour les exports PDF.

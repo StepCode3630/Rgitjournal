@@ -1,0 +1,139 @@
+import os,sys,json,tempfile,subprocess,time,ctypes,ctypes.util
+from pathlib import Path
+import gi
+gi.require_version('Atspi','2.0')
+from gi.repository import Atspi
+root=Path.cwd()
+with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
+ d=Path(tmp);repo=d/'repo';repo.mkdir()
+ def git(*args):return subprocess.check_output(['git','-C',str(repo),*args],stderr=subprocess.PIPE)
+ git('init','-q','-b','main')
+ git('-c','core.hooksPath='+str(repo),'-c','commit.gpgsign=false','-c','user.name=Test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','Tâche vérifiée [30m done]\nDescription <script>data</script>')
+ p={'projectName':'Essai Fedora','me':'Test','journalStartDate':None,'exceptions':[],'columns':[{'label':'Date','source':'date','format':'date','field':'date'},{'label':'Tâche','source':'name','field':'name'},{'label':'Description','source':'description','field':'description'},{'label':'Durée','source':'duration','format':'duration','field':'duration'},{'label':'Statut','source':'status','field':'status'}]}
+ project=repo/'essai.gitj';project.write_text(json.dumps(p))
+ env={**os.environ,'XDG_CONFIG_HOME':str(d/'config'),'XDG_DATA_HOME':str(d/'data'),'GDK_BACKEND':'x11','GTK_MODULES':'gail:atk-bridge'}
+ proc=subprocess.Popen([str(root/'src-tauri/target/debug/gitjournal-desktop'),str(project)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+ def app():
+  desktop=Atspi.get_desktop(0)
+  for i in range(desktop.get_child_count()):
+   child=desktop.get_child_at_index(i)
+   try:
+    if child.get_process_id()==proc.pid:return child
+   except Exception:pass
+ def walk(n,depth=0):
+  if n is None:return
+  yield n
+  if depth<12:
+   for i in range(n.get_child_count()):
+    try:yield from walk(n.get_child_at_index(i),depth+1)
+    except Exception:pass
+ try:
+  deadline=time.time()+30
+  while time.time()<deadline:
+   if proc.poll() is not None:raise RuntimeError(proc.stderr.read())
+   a=app()
+   names=[n.get_name() for n in walk(a)]
+   if any('Essai Fedora' in name for name in names):break
+   time.sleep(.3)
+  else:raise RuntimeError('Interface non trouvée : '+repr(names))
+  print('Journal Git rendu dans la webview Tauri.')
+  for n in walk(a):
+   if n.get_name()=='+ Ajouter une entrée':n.get_action_iface().do_action(0);break
+  time.sleep(.4)
+  def wait_for(check):
+   deadline=time.time()+10
+   while time.time()<deadline:
+    value=check()
+    if value:return value
+    time.sleep(.15)
+   raise AssertionError('Résultat attendu absent')
+  def find(role,name):
+   return next((n for n in walk(app()) if n.get_role_name()==role and n.get_name()==name),None)
+  def click(name):
+   target=wait_for(lambda:find('button',name));assert target.get_action_iface().do_action(0);time.sleep(.25)
+  xdo=ctypes.CDLL(ctypes.util.find_library('xdo'))
+  xdo.xdo_new.restype=ctypes.c_void_p;xdo.xdo_new.argtypes=[ctypes.c_char_p]
+  xd=xdo.xdo_new(None)
+  for function in [xdo.xdo_enter_text_window,xdo.xdo_send_keysequence_window]:
+   function.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.c_char_p,ctypes.c_uint]
+  window=next(line.split()[0] for line in subprocess.check_output(['wmctrl','-lp'],text=True).splitlines() if len(line.split())>2 and line.split()[2]==str(proc.pid))
+  subprocess.run(['wmctrl','-ia',window],check=True);time.sleep(.3)
+  xdo.xdo_move_mouse.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int,ctypes.c_int]
+  xdo.xdo_click_window.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.c_int]
+  def set_field(name,text):
+   target=wait_for(lambda:find('entry',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN);xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1);xdo.xdo_send_keysequence_window(xd,0,b'ctrl+a',12000);xdo.xdo_enter_text_window(xd,0,text.encode(),12000);time.sleep(.15)
+  set_field('Tâche','Manual <script>data</script>')
+  set_field('Description','Description test')
+  set_field('Durée','30')
+  set_field('Statut','Done')
+  click('Enregistrer')
+  wait_for(lambda:len(json.loads(project.read_text())['exceptions'])==1)
+  saved=json.loads(project.read_text())['exceptions'][0]
+  assert saved['duration']==30 and saved['name'].lower()=='manual <script>data</script>'
+  print('Ajout depuis le formulaire et sauvegarde automatique validés.')
+  wait_for(lambda:find('button','Modifier'))
+  edits=[n for n in walk(app()) if n.get_role_name()=='button' and n.get_name()=='Modifier']
+  edits[0].get_action_iface().do_action(0)
+  set_field('Durée','45');click('Enregistrer')
+  wait_for(lambda:json.loads(project.read_text())['exceptions'][0]['duration']==45)
+  print('Modification et persistance validées.')
+  click('Préférences');wait_for(lambda:find('button','Enregistrer'));click('Enregistrer')
+  preferences=d/'config'/'com.gitjournal.desktop'/'settings.json'
+  wait_for(lambda:preferences.exists() and json.loads(preferences.read_text()).get('githubToken')=='')
+  click('Statistiques');wait_for(lambda:find('button','Annuler'));click('Annuler')
+  click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
+  print('Préférences, statistiques et aide ouvertes et fermées.')
+  def native_dialog(title):
+   desktop=Atspi.get_desktop(0)
+   for i in range(desktop.get_child_count()):
+    candidate=desktop.get_child_at_index(i)
+    for j in range(candidate.get_child_count()):
+     window=candidate.get_child_at_index(j)
+     if title in window.get_name():return window
+  for label,extension in [('CSV','csv'),('PDF','pdf')]:
+   click(label)
+   native=wait_for(lambda:native_dialog('Exporter le journal en '+label))
+   save=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Save','Enregistrer'])
+   assert save.get_action_iface().do_action(0)
+   output=repo/('journal.'+extension)
+   wait_for(lambda:output.exists() and output.stat().st_size>0)
+   if extension=='csv':
+    data=output.read_bytes();assert data.startswith(b'\xef\xbb\xbf');assert b'45' in data;assert b'\r\n' in data
+   else:
+    assert output.read_bytes().startswith(b'%PDF-')
+    text=subprocess.check_output(['pdftotext',str(output),'-'],text=True)
+    assert 'Tâche vérifiée' in text and 'Total du projet' in text
+   print(label+' créé depuis la fenêtre Tauri et contenu vérifié.')
+   time.sleep(.3)
+  target=wait_for(lambda:find('button','Imprimer'))
+  rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
+  xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)
+  native=wait_for(lambda:native_dialog('Print') or native_dialog('Imprimer'))
+  cancel=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Cancel','Annuler'])
+  assert cancel.get_action_iface().do_action(0)
+  print('Dialogue d’impression système vérifié et annulé sans impression physique.')
+  time.sleep(.3)
+  def pointer_click(name):
+   target=wait_for(lambda:find('button',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
+   xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)
+  edits=[n for n in walk(app()) if n.get_role_name()=='button' and n.get_name()=='Modifier']
+  edits[0].get_action_iface().do_action(0)
+  pointer_click('Supprimer l’entrée manuelle');click('Confirmer')
+  wait_for(lambda:not json.loads(project.read_text())['exceptions'])
+  click('Modifier');pointer_click('Exclure le commit');click('Confirmer')
+  wait_for(lambda:any(e.get('excluded') for e in json.loads(project.read_text())['exceptions']))
+  print('Suppression manuelle et exclusion validées depuis les formulaires.')
+  proc.terminate();proc.wait(timeout=5)
+  proc=subprocess.Popen([str(root/'src-tauri/target/debug/gitjournal-desktop')],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  wait_for(lambda:any('Essai Fedora' in n.get_name() for n in walk(app())))
+  print('Dernier projet restauré au redémarrage, sans argument de fichier.')
+  xdo.xdo_free.argtypes=[ctypes.c_void_p];xdo.xdo_free(xd)
+
+
+
+ finally:
+  proc.terminate()
+  try:proc.wait(timeout=5)
+  except subprocess.TimeoutExpired:proc.kill();proc.wait()
+  stderr=proc.stderr.read()
+  if stderr:print(stderr[-3000:])

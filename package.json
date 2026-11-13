@@ -15,7 +15,12 @@
     "build": "pnpm test && electron-builder",
     "build:mac": "pnpm test && electron-builder --mac",
     "build:win": "pnpm test && electron-builder --win",
-    "build:linux": "pnpm test && electron-builder --linux"
+    "build:linux": "pnpm test && electron-builder --linux",
+    "desktop:prepare": "node scripts/build-desktop.mjs",
+    "desktop:dev": "node scripts/build-desktop.mjs && cargo run --manifest-path src-tauri/Cargo.toml",
+    "desktop:check": "node scripts/build-desktop.mjs && cargo check --manifest-path src-tauri/Cargo.toml",
+    "test:desktop": "node --test desktop/model.test.js",
+    "desktop:build": "node scripts/build-desktop.mjs && tauri build"
   },
   "dependencies": {
     "ejs": "^3.1.10",
@@ -24,6 +29,7 @@
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.0"
   },

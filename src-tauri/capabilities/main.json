@@ -1,0 +1,6 @@
+{
+  "identifier": "main-events",
+  "description": "Le frontend reçoit uniquement les actions du menu et les changements de projet.",
+  "windows": ["main"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}
