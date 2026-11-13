@@ -89,18 +89,91 @@ pub fn save(path: &Path, p: &Value) -> Result<()> {
 }
 
 pub fn new_project() -> Value {
-    json!({"projectName":"", "me":"", "journalStartDate":null, "exceptions":[], "columns":[
+    json!({"projectName":"", "me":"", "journalStartDate":null, "columns":[
         {"label":"Date","source":"date","format":"date","field":"date"},
         {"label":"Tâche","source":"name","field":"name"},
         {"label":"Description","source":"description","field":"description"},
         {"label":"Durée","source":"duration","format":"duration","field":"duration"},
         {"label":"Statut","source":"status","format":"badge","field":"status"},
-        {"label":"Auteur","source":"author"}]})
+        {"label":"Auteur","source":"author"}], "exceptions":[]})
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn electron_format_roundtrip_preserves_field_order_and_custom_data() {
+        // JSON.stringify(project, null, 2), comme le gestionnaire Electron de main.
+        let original = r#"{
+  "projectName": "Projet éà",
+  "me": "Alice",
+  "journalStartDate": "2026-01-01",
+  "columns": [
+    {
+      "label": "Durée",
+      "source": "duration",
+      "format": "duration",
+      "field": "duration"
+    }
+  ],
+  "exceptions": [
+    {
+      "id": "manuel",
+      "type": "commitless",
+      "author": "Alice",
+      "date": "2026-01-02T12:00:00.000Z",
+      "name": "Réunion",
+      "duration": 30,
+      "custom": {
+        "z": 1,
+        "a": 2
+      }
+    },
+    {
+      "sha": "abc123",
+      "excluded": true
+    }
+  ],
+  "custom": {
+    "z": 1,
+    "a": 2
+  }
+}"#;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("electron.gitj");
+        fs::write(&path, original).unwrap();
+        let p = load(&path).unwrap();
+        save(&path, &p).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+    }
+
+    #[test]
+    fn new_project_uses_electron_field_order() {
+        let p = new_project();
+        assert_eq!(
+            p.as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            [
+                "projectName",
+                "me",
+                "journalStartDate",
+                "columns",
+                "exceptions"
+            ]
+        );
+        assert_eq!(
+            p["columns"][0]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["label", "source", "format", "field"]
+        );
+    }
     #[test]
     fn roundtrip_preserves_unknown_fields_and_replaces_file() {
         let dir = tempfile::tempdir().unwrap();
