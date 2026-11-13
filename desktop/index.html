@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GitJournal</title><link rel="stylesheet" href="style.css"><script type="module" src="app.js"></script></head>
+<body><nav aria-label="Actions du journal">
+<button data-action="new">Nouveau</button><button data-action="open">Ouvrir</button><button data-action="save">Enregistrer</button><button data-action="refresh">Actualiser</button><button data-action="configure">Configuration</button><button data-action="preferences">Préférences</button><button data-action="csv">CSV</button><button data-action="pdf">PDF</button><button data-action="print">Imprimer</button><button data-action="stats">Statistiques</button><button data-action="help">Aide</button></nav>
+<p id="status" role="status" aria-live="polite"></p><main><h1 id="title">Journal de travail</h1><p id="subtitle">Ouvrez un projet .gitj ou créez un projet à la racine de votre dépôt.</p><div id="journal"></div><button id="add" hidden>+ Ajouter une entrée</button><p class="version">GitJournal 4.1.1</p></main>
+<dialog id="modal"><form id="form"><h2 id="dialog-title"></h2><div id="fields"></div><p id="form-error" role="alert"></p><footer><button type="button" id="cancel">Annuler</button><button type="submit" id="submit">Enregistrer</button></footer></form></dialog>
+</body></html>
