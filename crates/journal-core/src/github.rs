@@ -77,13 +77,13 @@ pub fn comment_metadata(text: &str) -> (u64, String, String) {
     (0, String::new(), text.trim().to_owned())
 }
 
-fn fetch_pages(client: &Client, url: &str, token: &str) -> Result<Vec<Value>> {
+fn fetch_pages(client: &Client, url: &str, token: &str, origin: &str) -> Result<Vec<Value>> {
     let mut next = Some(url.to_owned());
     let mut values = Vec::new();
     let mut visited = std::collections::HashSet::new();
     while let Some(url) = next.take() {
         // Never send authentication to an arbitrary pagination host.
-        if !url.starts_with("https://api.github.com/") || !visited.insert(url.clone()) {
+        if !url.starts_with(origin) || !visited.insert(url.clone()) {
             return Err("Pagination GitHub invalide".into());
         }
         let mut req = client
@@ -173,8 +173,27 @@ pub fn read_comments(base: &str, project: &Value, token: &str) -> Result<Vec<Val
             .query_pairs_mut()
             .append_pair("since", &since.to_rfc3339());
     }
-    let comments = fetch_pages(&client, comments_url.as_str(), token)?;
-    let issues = fetch_pages(&client, issues_url.as_str(), token)?;
+    let comments = fetch_pages(
+        &client,
+        comments_url.as_str(),
+        token,
+        "https://api.github.com/",
+    )?;
+    let issues = fetch_pages(
+        &client,
+        issues_url.as_str(),
+        token,
+        "https://api.github.com/",
+    )?;
+    filter_comments(&comments, &issues, project, since)
+}
+
+fn filter_comments(
+    comments: &[Value],
+    issues: &[Value],
+    project: &Value,
+    since: Option<chrono::DateTime<chrono::FixedOffset>>,
+) -> Result<Vec<Value>> {
     let index: HashMap<_, _> = issues
         .iter()
         .filter_map(|i| Some((i["url"].as_str()?, i)))
@@ -224,5 +243,110 @@ mod tests {
             comment_metadata("Texte\n[1][30][WIP]\nSuite"),
             (90, "WIP".into(), "Texte\nSuite".into())
         );
+    }
+}
+
+#[cfg(test)]
+mod transport_tests {
+    use super::*;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        thread,
+    };
+    fn mock(status: &str, body: &str, headers: &str) -> (String, thread::JoinHandle<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        let response=format!("HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n{headers}\r\n{body}",body.len());
+        let task = thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let mut bytes = [0; 8192];
+            let n = socket.read(&mut bytes).unwrap();
+            socket.write_all(response.as_bytes()).unwrap();
+            String::from_utf8_lossy(&bytes[..n]).into_owned()
+        });
+        (url, task)
+    }
+    #[test]
+    fn bearer_and_successful_response() {
+        let (url, task) = mock("200 OK", r#"[{"id":42}]"#, "");
+        let items = fetch_pages(&Client::new(), &url, "synthetic-token", &url).unwrap();
+        assert_eq!(items[0]["id"], 42);
+        assert!(task
+            .join()
+            .unwrap()
+            .to_lowercase()
+            .contains("authorization: bearer synthetic-token"));
+    }
+    #[test]
+    fn github_errors_are_reported_without_response_or_credentials() {
+        for (status, headers, expected) in [
+            ("401 Unauthorized", "", "Token GitHub"),
+            ("403 Forbidden", "x-ratelimit-remaining: 0\r\n", "Limite"),
+            ("403 Forbidden", "", "Permission"),
+            ("404 Not Found", "", "introuvable"),
+        ] {
+            let (url, task) = mock(status, r#"{"message":"private response"}"#, headers);
+            let error = fetch_pages(&Client::new(), &url, "synthetic-token", &url).unwrap_err();
+            assert!(error.contains(expected));
+            assert!(!error.contains("synthetic-token"));
+            assert!(!error.contains("private response"));
+            task.join().unwrap();
+        }
+    }
+    #[test]
+    fn follows_pages_and_rejects_off_origin_links() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}/", listener.local_addr().unwrap());
+        let task_base = base.clone();
+        let task = thread::spawn(move || {
+            for i in 1..=2 {
+                let (mut socket, _) = listener.accept().unwrap();
+                let mut request = [0; 4096];
+                let n = socket.read(&mut request).unwrap();
+                assert!(n > 0);
+                let body = format!("[{{\"id\":{i}}}]");
+                let link = if i == 1 {
+                    format!("Link: <{task_base}page2>; rel=\"next\"\r\n")
+                } else {
+                    String::new()
+                };
+                write!(socket,"HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n{link}\r\n{body}",body.len()).unwrap();
+            }
+        });
+        assert_eq!(
+            fetch_pages(&Client::new(), &base, "", &base).unwrap().len(),
+            2
+        );
+        task.join().unwrap();
+        let (url, task) = mock(
+            "200 OK",
+            "[]",
+            "Link: <http://outside.invalid/>; rel=\"next\"\r\n",
+        );
+        assert!(fetch_pages(&Client::new(), &url, "", &url)
+            .unwrap_err()
+            .contains("Pagination"));
+        task.join().unwrap();
+    }
+    #[test]
+    fn filters_creation_date_and_authors_but_keeps_no_duration_comments() {
+        let comments = vec![
+            json!({"id":1,"body":"Discussion","created_at":"2026-02-01T10:00:00Z","user":{"login":"ALICE"},"issue_url":"u","html_url":"https://github.com/o/r/issues/1#1"}),
+            json!({"id":2,"body":"[30m done] Test","created_at":"2020-01-01T10:00:00Z","user":{"login":"Alice"},"issue_url":"u"}),
+            json!({"id":3,"body":"Other","created_at":"2026-02-01T10:00:00Z","user":{"login":"Bob"},"issue_url":"u"}),
+        ];
+        let issues = vec![json!({"url":"u","number":1,"title":"Pull request","pull_request":{}})];
+        let entries = filter_comments(
+            &comments,
+            &issues,
+            &json!({"me":"Alice"}),
+            Some(crate::project::parse_date("2026-01-01").unwrap()),
+        )
+        .unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0]["source"], "pr");
+        assert_eq!(entries[0]["duration"], 0);
+        assert_eq!(entries[0]["description"], "Discussion");
     }
 }

@@ -18,6 +18,9 @@ pub fn validate(p: &Value) -> Result<()> {
     }
     let authors = super::journal::authors(&p["me"]);
     if authors.is_empty()
+        || p["me"]
+            .as_array()
+            .is_some_and(|a| a.iter().any(|v| !v.is_string()))
         || !p["exceptions"].is_array()
         || p["columns"].as_array().is_none_or(Vec::is_empty)
     {
@@ -25,6 +28,27 @@ pub fn validate(p: &Value) -> Result<()> {
     }
     if let Some(date) = p["journalStartDate"].as_str() {
         parse_date(date)?;
+    } else if !p["journalStartDate"].is_null() {
+        return Err("Date de début invalide".into());
+    }
+    for column in p["columns"].as_array().unwrap() {
+        if !column["label"].is_string() || !column["source"].is_string() {
+            return Err("Chaque colonne doit définir label et source".into());
+        }
+    }
+    for exception in p["exceptions"].as_array().unwrap() {
+        if !exception.is_object() {
+            return Err("Exception invalide".into());
+        }
+        if exception["excluded"] != true
+            && ["commitless", "commitpatch"].contains(&exception["type"].as_str().unwrap_or(""))
+        {
+            parse_date(
+                exception["date"]
+                    .as_str()
+                    .ok_or("Date de l’entrée requise")?,
+            )?;
+        }
     }
     Ok(())
 }
