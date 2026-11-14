@@ -1,6 +1,47 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { columnValue, groupEntries, csv, startDateIso } from "./model.js";
+import {
+  columnValue,
+  groupEntries,
+  csv,
+  startDateIso,
+  taskPrefix,
+  withTaskPrefix,
+  entryDateParts,
+  entryDateIso,
+} from "./model.js";
+
+test("task prefixes can be suggested, replaced and removed without duplicating the scope", () => {
+  assert.equal(
+    withTaskPrefix("Ajouter un filtre", "feat"),
+    "feat: Ajouter un filtre",
+  );
+  assert.equal(
+    withTaskPrefix("feat(ui)!: Corriger", "fix"),
+    "fix(ui)!: Corriger",
+  );
+  assert.equal(withTaskPrefix("chore: Nettoyer", "chore"), "chore: Nettoyer");
+  assert.equal(withTaskPrefix("feat(ui): Ajouter", ""), "Ajouter");
+  assert.equal(
+    withTaskPrefix("feat(ui): Ajouter (détail): suite", ""),
+    "Ajouter (détail): suite",
+  );
+  assert.equal(taskPrefix("docs: Guide"), "docs");
+  assert.equal(taskPrefix("Texte libre"), "");
+  assert.equal(withTaskPrefix("Texte libre", ""), "Texte libre");
+});
+test("entry date and time use local calendar fields and retain the original instant on edit", () => {
+  const original = "2026-01-02T12:34:56.789Z";
+  const parts = entryDateParts(original);
+  assert.equal(entryDateIso(parts.day, parts.time, original), original);
+  const chosen = new Date(2026, 0, 4, 9, 15);
+  const edited = entryDateParts(chosen);
+  assert.equal(entryDateIso(edited.day, edited.time), chosen.toISOString());
+  assert.equal(edited.day, "2026-01-04");
+  assert.equal(edited.time, "09:15");
+  assert.throws(() => entryDateIso("", "09:15"), /requises/);
+  assert.throws(() => entryDateParts("invalide"), /invalide/);
+});
 
 test("project start dates retain UTC date-only semantics", () => {
   assert.equal(startDateIso("2026-01-01"), "2026-01-01T00:00:00.000Z");

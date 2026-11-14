@@ -13,6 +13,7 @@ JavaScript ; cette coexistence est volontaire et contrôlée par des tests de pa
 | Git | Comparaison réelle JS/Rust sur dépôt temporaire : branches, auteurs, date, déduplication, bots, durées, liens, exclusions, modifications et entrées manuelles |
 | Erreurs | Dépôt vide distingué d’un chemin invalide ou d’un échec Git ; erreurs affichées explicitement |
 | Interface | Modèle testé : regex JavaScript/groupes, regroupement UTC, totaux, CSV ; parcours graphique Fedora : tableau, formulaires, aide et statistiques |
+| Saisie | Calendrier et heure locale séparés, préfixes de tâche facultatifs, durée en minutes, statut obligatoire Done/WIP ; tests du modèle et du backend, ajout avec feat/Done puis modification en WIP dans la fenêtre Fedora |
 | Projets | `.gitj` existants, date de début seule, champs inconnus préservés ; chargement/sauvegarde/édition/suppression testés ; création native testée sous Fedora |
 | Intégration | Menus et raccourcis, titre du projet, zoom, liens HTTP(S), arguments chemin/URI ; association MIME Linux et métadonnées Windows/macOS dans les paquets |
 | Persistance | Écriture atomique dans le dossier cible ; autosave, échec d’écriture, restauration, migration des préférences sans modification du fichier ancien testés ; fermeture attend les écritures |
@@ -33,7 +34,7 @@ pnpm test:parity
 pnpm build
 ```
 
-La suite comporte 54 tests JavaScript, 17 tests du cœur Rust et 6 tests du bureau.
+La suite comporte 56 tests JavaScript, 17 tests du cœur Rust et 7 tests du bureau.
 Le corpus `doc/fixtures/metadata.json` contient des données synthétiques et ne
 représente jamais des événements de journal réels. Les tests de parité créent des
 commits dans un dépôt temporaire puis le suppriment.

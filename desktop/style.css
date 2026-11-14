@@ -108,6 +108,14 @@ textarea {
 textarea {
   min-height: 120px;
 }
+.entry-date {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.entry-date label {
+  flex: 1 1 200px;
+}
 footer {
   display: flex;
   gap: 0.6rem;

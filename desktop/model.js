@@ -11,6 +11,54 @@ export function columnValue(entry, column) {
 export function startDateIso(value) {
   return value ? new Date(value).toISOString() : null;
 }
+export const taskPrefixes = [
+  "feat",
+  "fix",
+  "docs",
+  "style",
+  "refactor",
+  "perf",
+  "test",
+  "build",
+  "ci",
+  "chore",
+  "revert",
+];
+export function taskPrefix(name) {
+  const prefix = String(name).match(/^([a-z]+)(?:\([^()\r\n]*\))?!?:\s*/)?.[1];
+  return taskPrefixes.includes(prefix) ? prefix : "";
+}
+export function withTaskPrefix(name, prefix) {
+  const current = taskPrefix(name);
+  if (current) {
+    // Conserver le scope et le marqueur de rupture quand seul le type change.
+    return prefix
+      ? prefix + name.slice(current.length)
+      : name.replace(/^[a-z]+(?:\([^()\r\n]*\))?!?:\s*/, "");
+  }
+  return prefix ? `${prefix}: ${name}` : name;
+}
+export function entryDateParts(value) {
+  const d = new Date(value);
+  if (!Number.isFinite(d.getTime())) throw new Error("Date invalide");
+  const pad = (n) => String(n).padStart(2, "0");
+  return {
+    day: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+export function entryDateIso(day, time, original) {
+  if (!day || !time) throw new Error("Date et heure requises");
+  if (original) {
+    const previous = entryDateParts(original);
+    if (previous.day === day && previous.time === time)
+      return new Date(original).toISOString();
+  }
+  const date = new Date(`${day}T${time}`);
+  if (!Number.isFinite(date.getTime()))
+    throw new Error("Date ou heure invalide");
+  return date.toISOString();
+}
 export function formatCell(entry, column) {
   const value = columnValue(entry, column);
   if (column.format === "date")

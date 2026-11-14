@@ -4,6 +4,11 @@ import {
   csv,
   exportTable,
   startDateIso,
+  taskPrefixes,
+  taskPrefix,
+  withTaskPrefix,
+  entryDateParts,
+  entryDateIso,
 } from "./model.js";
 import { condenseDescription } from "./description-filter.js";
 const invoke = (...args) => window.__TAURI__.core.invoke(...args);
@@ -75,11 +80,6 @@ function field(label, name, value = "", type = "text", options) {
   wrapper.append(input);
   return wrapper;
 }
-function localDate(iso) {
-  const d = new Date(iso);
-  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
 function confirmAction(message) {
   return new Promise((resolve) => {
     const modal = node("dialog");
@@ -235,28 +235,83 @@ async function accept(p) {
   }
 }
 function edit(entry = {}) {
-  const fields = project.columns
-    .filter((c) => c.field)
-    .map((c) => {
-      let value = entry[c.field] ?? "";
-      if (c.field === "date")
-        value = localDate(entry.date ?? new Date().toISOString());
-      return field(
-        c.label,
-        c.field,
-        value,
-        c.field === "date"
-          ? "datetime-local"
-          : c.field === "duration"
-            ? "number"
-            : c.field === "description"
-              ? "textarea"
-              : "text",
-        ["select", "dropdown"].includes(c.type)
-          ? (c.values ?? c.options ?? [])
-          : undefined,
+  const columns = project.columns.filter((c) => c.field);
+  if (!columns.some((c) => c.field === "status"))
+    columns.push({ label: "Statut", field: "status" });
+  const fields = columns.map((c) => {
+    let value = entry[c.field] ?? "";
+    if (c.field === "date") {
+      const { day, time } = entryDateParts(
+        entry.date ?? new Date().toISOString(),
       );
-    });
+      const group = node("div", undefined, { class: "entry-date" });
+      const dateField = field("Date", "_entryDay", day, "date");
+      const timeField = field("Heure locale", "_entryTime", time, "time");
+      dateField.querySelector("input").required = true;
+      const timeInput = timeField.querySelector("input");
+      timeInput.required = true;
+      timeInput.step = "60";
+      group.append(dateField, timeField);
+      return group;
+    }
+    if (c.field === "name") {
+      const group = node("div");
+      const prefix = field(
+        "Préfixe de la tâche (facultatif)",
+        "_taskPrefix",
+        taskPrefix(value),
+        "text",
+        taskPrefixes,
+      );
+      prefix.querySelector("option").textContent = "Sans préfixe";
+      const task = field(c.label, c.field, value);
+      const select = prefix.querySelector("select");
+      const input = task.querySelector("input");
+      input.placeholder = "feat(interface): ajouter un filtre";
+      select.onchange = () => {
+        input.value = withTaskPrefix(input.value, select.value);
+      };
+      input.oninput = () => {
+        select.value = taskPrefix(input.value);
+      };
+      group.append(prefix, task);
+      return group;
+    }
+    if (c.field === "status") {
+      value = /^(done|wip)$/i.test(value)
+        ? value.toUpperCase() === "WIP"
+          ? "WIP"
+          : "Done"
+        : "";
+      const statusField = field(c.label, c.field, value, "text", [
+        "Done",
+        "WIP",
+      ]);
+      const select = statusField.querySelector("select");
+      select.required = true;
+      select.options[0].textContent = "Choisir un statut";
+      select.options[0].disabled = true;
+      return statusField;
+    }
+    const wrapper = field(
+      c.field === "duration" ? `${c.label} (min)` : c.label,
+      c.field,
+      value,
+      c.field === "duration"
+        ? "number"
+        : c.field === "description"
+          ? "textarea"
+          : "text",
+      ["select", "dropdown"].includes(c.type)
+        ? (c.values ?? c.options ?? [])
+        : undefined,
+    );
+    if (c.field === "duration") {
+      const input = wrapper.querySelector("input");
+      if (input) input.placeholder = "Ex. : 30";
+    }
+    return wrapper;
+  });
   if (entry.sha || entry.id) {
     const remove = node(
       "button",
@@ -282,7 +337,15 @@ function edit(entry = {}) {
     fields,
     async (form) => {
       const values = Object.fromEntries(form);
-      if (values.date) values.date = new Date(values.date).toISOString();
+      if ("_entryDay" in values)
+        values.date = entryDateIso(
+          values._entryDay,
+          values._entryTime,
+          entry.date,
+        );
+      delete values._entryDay;
+      delete values._entryTime;
+      delete values._taskPrefix;
       if ("duration" in values) values.duration = Number(values.duration) || 0;
       project = await invoke("update_entry", { entry, values });
       await refresh();

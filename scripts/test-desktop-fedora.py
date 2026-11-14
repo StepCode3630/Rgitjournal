@@ -66,20 +66,31 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    xdo.xdo_enter_text_window(xd,int(window,16),text.encode(),12000)
   def set_field(name,text):
    target=wait_for(lambda:find('entry',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN);xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1);type_text(text);time.sleep(.15)
+  def select_field(name,index):
+   target=wait_for(lambda:find('combo box',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
+   xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1)
+   options=[n for n in walk(target) if n.get_role_name()=='menu item']
+   assert options[index].get_action_iface().do_action(0)
+   time.sleep(.2)
   set_field('Tâche','Manual <script>data</script>')
   set_field('Description','Description test')
-  set_field('Durée','30')
-  set_field('Statut','Done')
+  set_field('Durée (min)','30')
+  click('Enregistrer')
+  assert not json.loads(project.read_text())['exceptions'], 'Statut obligatoire'
+  select_field('Préfixe de la tâche (facultatif)',1)
+  select_field('Statut',1)
   click('Enregistrer')
   wait_for(lambda:len(json.loads(project.read_text())['exceptions'])==1)
   saved=json.loads(project.read_text())['exceptions'][0]
-  assert saved['duration']==30 and saved['name'].lower()=='manual <script>data</script>'
+  assert saved['duration']==30 and saved['name'].lower()=='feat: manual <script>data</script>' and saved['status']=='Done'
   print('Ajout depuis le formulaire et sauvegarde automatique validés.')
   wait_for(lambda:find('button','Modifier'))
   edits=[n for n in walk(app()) if n.get_role_name()=='button' and n.get_name()=='Modifier']
   edits[0].get_action_iface().do_action(0)
-  set_field('Durée','45');click('Enregistrer')
+  set_field('Durée (min)','45');select_field('Statut',2);click('Enregistrer')
   wait_for(lambda:json.loads(project.read_text())['exceptions'][0]['duration']==45)
+  assert json.loads(project.read_text())['exceptions'][0]['status']=='WIP'
+  assert json.loads(project.read_text())['exceptions'][0]['date']==saved['date']
   print('Modification et persistance validées.')
   click('Préférences');wait_for(lambda:find('button','Enregistrer'));click('Enregistrer')
   preferences=d/'config'/'com.gitjournal.desktop'/'settings.json'
@@ -117,7 +128,9 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   print('Dialogue d’impression système vérifié et annulé sans impression physique.')
   time.sleep(.3)
   def pointer_click(name):
-   target=wait_for(lambda:find('button',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
+   target=wait_for(lambda:find('button',name))
+   Atspi.Component.scroll_to(target,Atspi.ScrollType.ANYWHERE);time.sleep(.2)
+   rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
    xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)
   edits=[n for n in walk(app()) if n.get_role_name()=='button' and n.get_name()=='Modifier']
   edits[0].get_action_iface().do_action(0)

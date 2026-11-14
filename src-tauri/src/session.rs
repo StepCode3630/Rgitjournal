@@ -63,6 +63,11 @@ impl Session {
             return Err("Les commentaires sont à modifier sur GitHub".into());
         }
         let mut project = self.project.clone().ok_or("Aucun projet ouvert")?;
+        if let Some(status) = values.get("status") {
+            if !matches!(status.as_str(), Some("Done" | "WIP")) {
+                return Err("Choisir un statut : Done ou WIP".into());
+            }
+        }
         let columns = project["columns"]
             .as_array()
             .ok_or("Colonnes invalides")?
@@ -84,6 +89,10 @@ impl Session {
                     patch[field] = value.clone();
                 }
             }
+        }
+        // Le statut reste éditable même lorsqu’il n’est pas affiché en colonne.
+        if let Some(status) = values.get("status") {
+            patch["status"] = status.clone();
         }
         let date = patch["date"].as_str().ok_or("Date requise")?;
         chrono_date(date)?;
@@ -191,6 +200,40 @@ mod tests {
         assert!(s.replace(project::new_project()).is_err());
         assert_eq!(s.project, previous);
     }
+    #[test]
+    fn entry_status_is_constrained_even_without_a_visible_status_column() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut s, file) = prepare(dir.path());
+        let mut p = s.project.clone().unwrap();
+        p["columns"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|c| c["field"] != "status");
+        s.replace(p).unwrap();
+        let before = fs::read(&file).unwrap();
+        for invalid in [json!(""), json!("other"), json!("DONE"), json!(null)] {
+            assert!(s
+                .update(
+                    &json!({}),
+                    &json!({"date":"2026-01-02T12:00:00Z", "status":invalid})
+                )
+                .is_err());
+            assert_eq!(fs::read(&file).unwrap(), before);
+        }
+        for status in ["Done", "WIP"] {
+            let p = s
+                .update(
+                    &json!({}),
+                    &json!({"date":"2026-01-02T12:00:00Z", "status":status}),
+                )
+                .unwrap();
+            assert_eq!(
+                p["exceptions"].as_array().unwrap().last().unwrap()["status"],
+                status
+            );
+        }
+    }
+
     #[test]
     fn legacy_project_in_subdirectory_opens_and_saves_without_data_loss() {
         let dir = tempfile::tempdir().unwrap();

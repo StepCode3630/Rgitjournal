@@ -284,8 +284,18 @@ Les commentaires ne peuvent pas être modifiés ni exclus dans GitJournal (les e
 ### Ajouter une entrée manuelle
 
 1. Cliquer sur le bouton **+** en bas du tableau
-2. Remplir le formulaire (nom, description, date, durée en minutes, statut)
-3. Cliquer sur **Enregistrer**
+2. Choisir la date avec le calendrier, puis l’heure locale dans le champ séparé.
+3. Saisir la tâche ; le menu de préfixes propose `feat`, `fix`, `docs`, `chore`, etc.
+   Le préfixe est facultatif et le texte reste libre. Changer le préfixe conserve
+   un éventuel scope, par exemple `feat(interface): ...` devient `fix(interface): ...`.
+4. Ajouter la description et la **durée en minutes** (par exemple `30`).
+5. Choisir obligatoirement le statut **Done** ou **WIP**.
+6. Cliquer sur **Enregistrer**.
+
+Ces contrôles s’appliquent aussi à la modification d’une entrée. Les anciens statuts
+`DONE` ou `done` sont présentés comme `Done` ; un autre statut doit être remplacé
+par l’un des deux choix lors de l’enregistrement. Les entrées existantes restent
+inchangées tant qu’elles ne sont pas enregistrées.
 
 ### Modifier ou exclure une entrée
 
