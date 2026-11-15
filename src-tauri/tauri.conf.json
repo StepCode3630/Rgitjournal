@@ -8,6 +8,7 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "enableGTKAppId": true,
     "windows": [
       {
         "label": "main",
@@ -25,6 +26,11 @@
     "targets": "all",
     "icon": [
       "../src/assets/icon.png",
+      "icons/32x32.png",
+      "icons/48x48.png",
+      "icons/128x128.png",
+      "icons/256x256.png",
+      "icons/512x512.png",
       "../src/assets/icon.ico",
       "../src/assets/icon.icns"
     ],
@@ -44,6 +50,7 @@
         "depends": ["git"],
         "desktopTemplate": "linux/GitJournal.desktop",
         "files": {
+          "/usr/share/applications/com.gitjournal.desktop.desktop": "linux/com.gitjournal.desktop.desktop",
           "/usr/share/mime/packages/gitjournal.xml": "linux/gitjournal.xml"
         }
       },
@@ -51,6 +58,7 @@
         "depends": ["git"],
         "desktopTemplate": "linux/GitJournal.desktop",
         "files": {
+          "/usr/share/applications/com.gitjournal.desktop.desktop": "linux/com.gitjournal.desktop.desktop",
           "/usr/share/mime/packages/gitjournal.xml": "linux/gitjournal.xml"
         }
       }

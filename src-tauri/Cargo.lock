@@ -1409,6 +1409,7 @@ dependencies = [
  "dirs 6.0.0",
  "fontdb",
  "gitjournal-core",
+ "glib",
  "printpdf",
  "rfd",
  "serde_json",

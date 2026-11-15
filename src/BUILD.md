@@ -91,6 +91,38 @@ mainteneur et n’est pas réalisée ici. Aucun script ne publie de paquet ou de
 L’AppImage reste accessible avec `pnpm exec tauri build --bundles appimage` après préparation
 des ressources, mais ce format n’a pas été validé localement.
 
+### Icônes Linux et identité Wayland
+
+Le menu KDE utilise les PNG installés dans les tailles standard de `hicolor`
+(32, 48, 128, 256 et 512 pixels). Le PNG source de 1024 pixels seul n’est pas
+reconnu si cette taille n’est pas déclarée dans l’index du thème système.
+Pour régénérer les tailles depuis le dessin existant :
+
+```bash
+pnpm exec tauri icon src/assets/icon.png --output src-tauri/icons --png 32 --png 48 --png 128 --png 256 --png 512
+```
+
+Le lanceur visible est `com.gitjournal.desktop.desktop` : son nom sans le dernier
+`.desktop` correspond à l’identifiant `com.gitjournal.desktop`. Le nom de programme
+GLib est fixé avant l’initialisation GTK, en plus de `enableGTKAppId`, pour que
+GTK 3 annonce cet identifiant à KDE via Wayland. `StartupWMClass` garde la même
+valeur pour X11/Xwayland. L’ancien `GitJournal.desktop` est conservé avec
+`NoDisplay=true` pour les raccourcis existants, sans deuxième entrée dans le menu.
+La dépendance Linux directe `glib` réutilise la version déjà présente via GTK.
+
+Sur Fedora, avec PySide6 (`python3-pyside6`) et `desktop-file-utils`, vérifier le
+contenu préparé du DEB et lancer brièvement le binaire en **Wayland natif** :
+
+```bash
+python3 scripts/test-linux-icons.py src-tauri/target/release/bundle/deb/GitJournal_4.1.1_amd64/data src-tauri/target/release/gitjournal-desktop
+```
+
+Adapter le chemin à la version et à l’architecture construites. Le script vérifie
+la résolution réelle de l’icône avec Qt et l’`app_id` envoyé au compositeur.
+Il utilise des préférences, un thème de test et un bus D-Bus temporaires ;
+il ne réécrit pas les préférences de l’utilisateur. Sans le dernier argument,
+il vérifie uniquement les lanceurs et les icônes du paquet extrait.
+
 La CI `.github/workflows/desktop.yml` compile et teste sur Linux, Windows et macOS.
 Sa matrice utilise `ubuntu-24.04`, `windows-latest` et `macos-15` (Apple Silicon).
 Le runner `macos-14` a été remplacé après son

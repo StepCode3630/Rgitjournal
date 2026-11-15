@@ -309,6 +309,11 @@ fn show_main(app: &tauri::AppHandle) -> Result<()> {
 }
 
 fn main() {
+    let context = tauri::generate_context!();
+    // GTK 3 on KDE can use GLib's program name for xdg_toplevel.app_id even
+    // when GtkApplication has an ID. Set it before GTK creates any window.
+    #[cfg(target_os = "linux")]
+    glib::set_prgname(Some(context.config().identifier.as_str()));
     let app = tauri::Builder::default()
         .setup(|app| {
             let settings = app.path().app_config_dir()?.join("settings.json");
@@ -452,7 +457,7 @@ fn main() {
             open_link,
             export_file
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("Impossible de démarrer GitJournal");
     app.run(|app, event| match event {
         tauri::RunEvent::ExitRequested { api, code, .. } => {

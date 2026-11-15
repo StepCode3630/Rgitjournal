@@ -78,6 +78,13 @@ vérifier directement `src-tauri/target/release/gitjournal-desktop`.
 
 ## Limites de validation
 
+Correction des icônes vérifiée sous Fedora 45 / KDE Plasma / Wayland : Qt résout
+les cinq tailles d’icône dans les contenus des RPM et DEB construits ; le binaire
+optimisé annonce `com.gitjournal.desktop` via `xdg_toplevel.set_app_id` en Wayland
+natif. Le lanceur visible porte ce même identifiant et l’ancien est masqué.
+Le test reproductible est documenté dans `src/BUILD.md` ; la réinstallation système
+du paquet nécessite les droits administrateur.
+
 Validation locale : Fedora 44 x86_64, GTK 3.24 et WebKitGTK 2.54. Les paquets n’ont pas
 été installés sur le système de l’utilisateur. Le binaire optimisé a été exécuté directement.
 Aucune imprimante physique n’a été utilisée. Les interactions GitHub ont été testées

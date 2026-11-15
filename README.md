@@ -412,6 +412,24 @@ Les artefacts sont générés dans `src-tauri/target/release/bundle/`.
 - Vérifier que les dépendances sont installées (`pnpm install` à la racine)
 - Consulter les erreurs du terminal (`pnpm start`) et vérifier les prérequis système
 
+### Icône absente dans KDE Plasma sous Wayland
+
+Installer le paquet reconstruit après la correction des icônes. Pour remplacer
+un RPM déjà installé de même version, depuis le dossier contenant ce paquet :
+
+```bash
+sudo dnf reinstall ./GitJournal-VERSION-ARCH.rpm
+kbuildsycoca6 --noincremental
+```
+
+Remplacer le nom du RPM par son nom exact. Fermer puis relancer GitJournal depuis
+le menu. Si une ancienne icône reste épinglée à la barre des tâches, la désépingler
+puis épingler la nouvelle entrée **GitJournal**. Les fichiers `.gitj` et les
+préférences sont conservés.
+
+Les paquets installent les tailles d’icône usuelles et le lanceur correspondant
+à l’identifiant Wayland. Voir [les vérifications Linux](src/BUILD.md#icônes-linux-et-identité-wayland).
+
 ### Le journal est vide
 
 - Vérifier que le fichier `.gitj` est bien placé **dans le dépôt Git**, à la racine ou dans un sous-dossier
