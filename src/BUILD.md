@@ -68,6 +68,9 @@ crée et vérifie un CSV/PDF, ouvre puis annule l’impression, teste l’éditi
 Il utilise le pointeur/clavier de la session graphique ; le laisser terminer sans saisie concurrente.
 Il ne touche pas aux journaux ni aux préférences de l’utilisateur.
 Le test PDF Rust vérifie la pagination et, si Poppler est disponible, l’extraction du texte.
+L’extraction utilise explicitement `pdftotext -enc UTF-8` pour que la vérification
+des accents ne dépende pas de l’encodage par défaut du système ou de l’outil,
+notamment sous Windows. Le décodage UTF-8 reste strict.
 
 ## Paquets natifs
 

@@ -115,7 +115,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
     data=output.read_bytes();assert data.startswith(b'\xef\xbb\xbf');assert b'45' in data;assert b'\r\n' in data
    else:
     assert output.read_bytes().startswith(b'%PDF-')
-    text=subprocess.check_output(['pdftotext',str(output),'-'],text=True)
+    text=subprocess.check_output(['pdftotext','-enc','UTF-8',str(output),'-'],text=True,encoding='utf-8')
     assert 'Tâche vérifiée' in text and 'Total du projet' in text
    print(label+' créé depuis la fenêtre Tauri et contenu vérifié.')
    time.sleep(.3)

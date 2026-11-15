@@ -265,14 +265,21 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("journal.pdf");
         std::fs::write(&path, bytes).unwrap();
-        // Also validate actual text extraction when Poppler is available on the host.
+        // Request UTF-8 explicitly: the host's pdftotext build/configuration may
+        // otherwise emit a Windows code page instead of UTF-8.
         if let Ok(out) = std::process::Command::new("pdftotext")
+            .args(["-enc", "UTF-8"])
             .arg(&path)
             .arg("-")
             .output()
         {
-            assert!(out.status.success());
-            let text = String::from_utf8(out.stdout).unwrap();
+            assert!(
+                out.status.success(),
+                "pdftotext failed: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            let text =
+                String::from_utf8(out.stdout).expect("pdftotext -enc UTF-8 must emit valid UTF-8");
             assert!(text.contains("Tâche numéro 149"));
             assert!(text.contains("éàü"));
         }
