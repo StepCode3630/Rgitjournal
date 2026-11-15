@@ -92,6 +92,10 @@ L’AppImage reste accessible avec `pnpm exec tauri build --bundles appimage` ap
 des ressources, mais ce format n’a pas été validé localement.
 
 La CI `.github/workflows/desktop.yml` compile et teste sur Linux, Windows et macOS.
+Sa matrice utilise `ubuntu-24.04`, `windows-latest` et `macos-15` (Apple Silicon).
+Le runner `macos-14` a été remplacé après son
+[retrait par GitHub le 2 novembre 2026](https://github.blog/changelog/2026-10-01-github-actions-macos-14-runner-image-retirement/).
+Cette matrice ne couvre pas les Mac Intel ; ils nécessitent une validation distincte.
 Elle ne déclenche aucun déploiement ni publication et n’a pas été exécutée depuis cette session.
 
 ## Dépendances et versions
