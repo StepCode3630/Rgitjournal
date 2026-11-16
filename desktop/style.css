@@ -1,3 +1,27 @@
+#navigation {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 3.5rem;
+  background: white;
+}
+#journal-actions {
+  padding-inline-end: 4.5rem;
+}
+#journal-actions[hidden] {
+  display: none;
+}
+#nav-toggle {
+  position: absolute;
+  top: 0.7rem;
+  right: 1rem;
+}
+@media print {
+  #navigation {
+    display: none;
+  }
+}
+
 :root {
   font-family: system-ui, sans-serif;
   color: #252a31;

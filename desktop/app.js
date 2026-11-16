@@ -519,6 +519,16 @@ $("modal").addEventListener("close", () =>
   document.querySelectorAll("nav button").forEach((b) => (b.disabled = busy)),
 );
 $("cancel").onclick = () => $("modal").close();
+$("nav-toggle").onclick = () => {
+  const nav = $("journal-actions");
+  nav.hidden = !nav.hidden;
+  const label = nav.hidden ? "Afficher les actions" : "Masquer les actions";
+  const toggle = $("nav-toggle");
+  toggle.textContent = nav.hidden ? label : "×";
+  toggle.setAttribute("aria-expanded", String(!nav.hidden));
+  toggle.setAttribute("aria-label", label);
+  toggle.title = label;
+};
 $("add").onclick = () => edit();
 for (const button of document.querySelectorAll("[data-action]"))
   button.onclick = () => run(actions[button.dataset.action]);

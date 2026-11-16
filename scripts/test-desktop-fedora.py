@@ -38,6 +38,18 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    time.sleep(.3)
   else:raise RuntimeError('Interface non trouvée : '+repr(names))
   print('Journal Git rendu dans la webview Tauri.')
+  assert not any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
+  toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions')
+  assert toggle.get_action_iface().do_action(0)
+  time.sleep(.25)
+  toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Masquer les actions')
+  assert any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
+  assert toggle.get_action_iface().do_action(0)
+  time.sleep(.25)
+  assert not any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
+  toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions')
+  assert toggle.get_action_iface().do_action(0)
+  print('Navigation masquée au lancement, affichage et fermeture validés.')
   for n in walk(a):
    if n.get_name()=='+ Ajouter une entrée':n.get_action_iface().do_action(0);break
   time.sleep(.4)
@@ -67,7 +79,9 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   def set_field(name,text):
    target=wait_for(lambda:find('entry',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN);xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1);type_text(text);time.sleep(.15)
   def select_field(name,index):
-   target=wait_for(lambda:find('combo box',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
+   target=wait_for(lambda:find('combo box',name))
+   Atspi.Component.scroll_to(target,Atspi.ScrollType.ANYWHERE);time.sleep(.2)
+   rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
    xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1)
    options=[n for n in walk(target) if n.get_role_name()=='menu item']
    assert options[index].get_action_iface().do_action(0)
@@ -145,6 +159,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   print('Dernier projet restauré au redémarrage, sans argument de fichier.')
   window=next(line.split()[0] for line in subprocess.check_output(['wmctrl','-lp'],text=True).splitlines() if len(line.split())>2 and line.split()[2]==str(proc.pid))
   subprocess.run(['wmctrl','-ia',window],check=True)
+  click('Afficher les actions')
   click('Nouveau')
   set_field('Nom du projet','Nouveau test')
   set_field('Auteur(s) Git (virgule ou point-virgule)','Test')

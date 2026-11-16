@@ -156,6 +156,10 @@ d’installation de votre système ci-dessus. Reconstruire le paquet après une 
 
 ## Utilisation
 
+La barre d’actions est masquée à chaque lancement. Cliquer sur **Afficher les actions**
+en haut à droite pour la déployer, puis sur la croix **×** pour la masquer.
+Les menus natifs et les raccourcis restent disponibles lorsque la barre est masquée.
+
 ### Créer un nouveau projet
 
 1. Menu : **Fichier > Nouveau projet** (`Cmd+N` / `Ctrl+N`)
