@@ -425,9 +425,17 @@ un RPM déjà installé de même version, depuis le dossier contenant ce paquet 
 ```bash
 sudo dnf reinstall ./GitJournal-VERSION-ARCH.rpm
 kbuildsycoca6 --noincremental
+dbus-send --session --type=signal /KIconLoader org.kde.KIconLoader.iconChanged int32:0
 ```
 
-Remplacer le nom du RPM par son nom exact. Fermer puis relancer GitJournal depuis
+Remplacer le nom du RPM par son nom exact. Les deux dernières commandes se lancent
+dans la session KDE, sans `sudo` : la première recharge les applications, la seconde
+demande au chargeur d’icônes KDE de relire les images en mémoire. Si les fichiers
+installés sont déjà à jour mais que l’ancienne icône reste visible, relancer ces
+deux commandes suffit à demander ce rafraîchissement, sans reconstruire le paquet
+ni supprimer de cache.
+
+Fermer puis relancer GitJournal depuis
 le menu. Si une ancienne icône reste épinglée à la barre des tâches, la désépingler
 puis épingler la nouvelle entrée **GitJournal**. Les fichiers `.gitj` et les
 préférences sont conservés.

@@ -132,6 +132,13 @@ Il utilise des préférences, un thème de test et un bus D-Bus temporaires ;
 il ne réécrit pas les préférences de l’utilisateur. Sans le dernier argument,
 il vérifie uniquement les lanceurs et les icônes du paquet extrait.
 
+Après remplacement d’une icône sous le même nom, `kbuildsycoca6` recharge les
+lanceurs mais ne suffit pas toujours à rafraîchir les images conservées en mémoire
+par Plasma. Depuis la session KDE, envoyer également le signal
+`dbus-send --session --type=signal /KIconLoader org.kde.KIconLoader.iconChanged int32:0`.
+Il utilise le mécanisme de rechargement de [KIconLoader](https://api.kde.org/kiconloader.html),
+sans suppression de cache ni redémarrage de Plasma.
+
 La CI `.github/workflows/desktop.yml` compile et teste sur Linux, Windows et macOS.
 Sa matrice utilise `ubuntu-24.04`, `windows-latest` et `macos-15` (Apple Silicon).
 Le runner `macos-14` a été remplacé après son
