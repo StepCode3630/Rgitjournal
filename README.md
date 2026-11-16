@@ -396,6 +396,11 @@ pnpm build:linux  # .deb / .rpm, depuis Linux
 
 Les artefacts sont générés dans `src-tauri/target/release/bundle/`.
 
+Après une modification de `src-tauri/icons/RGitJIcon.svg`, lancer
+`pnpm icons:generate`, puis reconstruire l’application pour inclure les nouvelles
+icônes. Le fichier Windows fourni est `src/assets/icon.ico` ; les PNG Linux et
+l’icône macOS sont générés depuis le SVG. Voir [src/BUILD.md](src/BUILD.md).
+
 ## Structure du projet
 
 - `crates/journal-core/` : parsing, collecte Git, exceptions, projets et commentaires GitHub en Rust.

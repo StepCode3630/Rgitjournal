@@ -7,6 +7,7 @@
   },
   "type": "module",
   "scripts": {
+    "icons:generate": "node scripts/generate-icons.mjs",
     "start": "node scripts/build-desktop.mjs && cargo run --manifest-path src-tauri/Cargo.toml",
     "dev": "node scripts/build-desktop.mjs && tauri dev",
     "test": "node --test src/server/server.test.js src/server/journal.test.js desktop/model.test.js",

@@ -94,13 +94,22 @@ des ressources, mais ce format n’a pas été validé localement.
 ### Icônes Linux et identité Wayland
 
 Le menu KDE utilise les PNG installés dans les tailles standard de `hicolor`
-(32, 48, 128, 256 et 512 pixels). Le PNG source de 1024 pixels seul n’est pas
-reconnu si cette taille n’est pas déclarée dans l’index du thème système.
-Pour régénérer les tailles depuis le dessin existant :
+(32, 48, 128, 256 et 512 pixels). Une taille non déclarée dans l’index du thème
+système ne suffit pas à faire reconnaître l’icône.
+Le dessin source est `src-tauri/icons/RGitJIcon.svg`. Pour régénérer les PNG
+Linux, l’icône de fenêtre et le fichier macOS `RGitJIcon.icns` :
 
 ```bash
-pnpm exec tauri icon src/assets/icon.png --output src-tauri/icons --png 32 --png 48 --png 128 --png 256 --png 512
+pnpm icons:generate
 ```
+
+Le SVG de 516 × 512 est centré dans un carré transparent sans rognage avec
+`--fit contain`. Les fichiers intermédiaires sont créés dans un dossier temporaire
+puis nettoyés ; seules les ressources de bureau nécessaires sont copiées dans
+`src-tauri/icons/`. Les fichiers fournis dans `src/assets/` ne sont pas réécrits :
+`icon.ico` est utilisé pour Windows, et `icon.png` reste le PNG source fourni.
+Le PNG carré de 512 pixels sert d’icône de fenêtre Tauri. Les ressources générées
+sont versionnées pour que la compilation ne nécessite pas de les régénérer.
 
 Le lanceur visible est `com.gitjournal.desktop.desktop` : son nom sans le dernier
 `.desktop` correspond à l’identifiant `com.gitjournal.desktop`. Le nom de programme
