@@ -2,20 +2,24 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  min-height: 3.5rem;
+  min-height: 0rem;
   background: white;
 }
+
 #journal-actions {
-  padding-inline-end: 4.5rem;
+  padding-inline-end: 3.5rem;
 }
+
 #journal-actions[hidden] {
   display: none;
 }
+
 #nav-toggle {
   position: absolute;
   top: 0.7rem;
   right: 1rem;
 }
+
 @media print {
   #navigation {
     display: none;
@@ -27,9 +31,11 @@
   color: #252a31;
   background: #f6f7f9;
 }
+
 body {
   margin: 0;
 }
+
 nav {
   position: sticky;
   top: 0;
@@ -40,6 +46,7 @@ nav {
   padding: 1rem;
   border-bottom: 1px solid #ddd;
 }
+
 button {
   padding: 0.55rem 0.8rem;
   border: 1px solid #aeb7c2;
@@ -48,24 +55,30 @@ button {
   color: #253147;
   cursor: pointer;
 }
+
 button:hover {
   background: #e7edf6;
 }
+
 button:disabled {
   opacity: 0.5;
   cursor: wait;
 }
+
 main {
   padding: 1rem 2rem;
 }
+
 h1 {
   font-size: 1.6rem;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
   background: white;
 }
+
 td,
 th {
   padding: 0.6rem;
@@ -75,35 +88,44 @@ th {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
 thead {
   background: #eaf0f7;
 }
+
 tr.editable {
   cursor: pointer;
 }
+
 tr.editable:hover {
   background: #f1f6fd;
 }
+
 .total {
   font-weight: bold;
   background: #edf0f4;
 }
+
 .badge {
   border-radius: 4px;
   background: #e2e8f0;
   padding: 0.1rem 0.3rem;
 }
+
 a {
   color: #245a9c;
 }
+
 #status {
   padding: 0 2rem;
   white-space: pre-wrap;
 }
+
 #status.error,
 #form-error {
   color: #a32626;
 }
+
 dialog {
   width: min(650px, 85vw);
   border: 1px solid #aaa;
@@ -111,13 +133,16 @@ dialog {
   max-height: 85vh;
   overflow: auto;
 }
+
 dialog::backdrop {
   background: #0008;
 }
+
 label {
   display: block;
   margin: 0.8rem 0;
 }
+
 input,
 select,
 textarea {
@@ -129,38 +154,48 @@ textarea {
   border-radius: 4px;
   font: inherit;
 }
+
 textarea {
   min-height: 120px;
 }
+
 .entry-date {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
 }
+
 .entry-date label {
   flex: 1 1 200px;
 }
+
 footer {
   display: flex;
   gap: 0.6rem;
   justify-content: flex-end;
   margin-top: 1rem;
 }
+
 .version {
   font-size: 0.75rem;
   color: #888;
 }
+
 .row-actions {
   white-space: nowrap;
 }
+
 #add {
   margin-top: 1rem;
 }
+
 @page {
   size: A4 landscape;
   margin: 10mm;
 }
+
 @media print {
+
   nav,
   #status,
   #add,
@@ -168,26 +203,33 @@ footer {
   .row-actions {
     display: none !important;
   }
+
   main {
     padding: 0;
   }
+
   body {
     background: white;
     font-size: 9pt;
   }
+
   thead {
     display: table-header-group;
   }
+
   tr {
     break-inside: avoid;
   }
+
   table {
     table-layout: fixed;
   }
+
   td,
   th {
     padding: 4px;
   }
+
   h1 {
     font-size: 16pt;
   }
