@@ -261,16 +261,21 @@ async fn export_file(
         .and_then(|p| p.parent())
         .map(|p| p.to_path_buf());
     durable(move || {
-        if !["csv", "pdf"].contains(&format.as_str()) {
+        if !["csv", "pdf", "md"].contains(&format.as_str()) {
             return Err("Format invalide".into());
         }
-        let mut dialog = rfd::FileDialog::new()
-            .set_title(format!("Exporter le journal en {}", format.to_uppercase()));
+        let label = if format == "md" {
+            "Markdown".to_owned()
+        } else {
+            format.to_uppercase()
+        };
+        let mut dialog =
+            rfd::FileDialog::new().set_title(format!("Exporter le journal en {label}"));
         if let Some(directory) = directory {
             dialog = dialog.set_directory(directory);
         }
         let Some(path) = dialog
-            .add_filter(&format, &[format.as_str()])
+            .add_filter(&label, &[format.as_str()])
             .set_file_name(format!("journal.{format}"))
             .save_file()
         else {
@@ -329,6 +334,7 @@ fn main() {
                 ("configure", "Configuration"),
                 ("pdf", "Exporter en PDF"),
                 ("csv", "Exporter en CSV"),
+                ("markdown", "Exporter en Markdown"),
                 ("print", "Imprimer"),
                 ("preferences", "Préférences"),
             ] {

@@ -134,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
     for j in range(candidate.get_child_count()):
      window=candidate.get_child_at_index(j)
      if title in window.get_name():return window
-  for label,extension in [('CSV','csv'),('PDF','pdf')]:
+  for label,extension in [('CSV','csv'),('PDF','pdf'),('Markdown','md')]:
    click(label)
    native=wait_for(lambda:native_dialog('Exporter le journal en '+label))
    save=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Save','Enregistrer'])
@@ -143,10 +143,16 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    wait_for(lambda:output.exists() and output.stat().st_size>0)
    if extension=='csv':
     data=output.read_bytes();assert data.startswith(b'\xef\xbb\xbf');assert b'45' in data;assert b'\r\n' in data
-   else:
+   elif extension=='pdf':
     assert output.read_bytes().startswith(b'%PDF-')
     text=subprocess.check_output(['pdftotext','-enc','UTF-8',str(output),'-'],text=True,encoding='utf-8')
     assert 'Tâche vérifiée' in text and 'Total du projet' in text
+   else:
+    text=output.read_text(encoding='utf-8')
+    assert text.startswith('# Essai Fedora\n')
+    assert '| Date | Tâche | Description | Durée | Statut |' in text
+    assert 'Tâche vérifiée' in text and 'Total du projet' in text
+    assert '**Total du projet' in text and 'WIP' in text
    print(label+' créé depuis la fenêtre Tauri et contenu vérifié.')
    time.sleep(.3)
   target=wait_for(lambda:find('button','Imprimer'))

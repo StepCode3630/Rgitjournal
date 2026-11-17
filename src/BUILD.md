@@ -37,7 +37,7 @@ et actualiser, ou relancer `pnpm dev`. Aucun serveur Node n’est lancé par le 
 ## Tests
 
 ```bash
-pnpm test                 # 59 tests JavaScript : CLI, parsing, Markdown et modèle web
+pnpm test                 # 62 tests JavaScript : CLI, parsing, Markdown et modèle web
 pnpm test:rust            # moteur, projets, API simulée, session et PDF
 pnpm test:parity          # comparaison réelle JS/Rust sur un dépôt Git temporaire
 pnpm desktop:check        # compilation du bureau
@@ -64,7 +64,7 @@ python3 scripts/test-desktop-fedora.py
 ```
 
 Le script ouvre une fenêtre X11/Xwayland, utilise un dépôt et des préférences isolés,
-crée et vérifie un CSV/PDF, ouvre puis annule l’impression, teste l’édition et la restauration.
+crée et vérifie un CSV/PDF/Markdown, ouvre puis annule l’impression, teste l’édition et la restauration.
 Il utilise le pointeur/clavier de la session graphique ; le laisser terminer sans saisie concurrente.
 Il ne touche pas aux journaux ni aux préférences de l’utilisateur.
 Le test PDF Rust vérifie la pagination et, si Poppler est disponible, l’extraction du texte.

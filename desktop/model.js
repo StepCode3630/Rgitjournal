@@ -176,6 +176,54 @@ export function csv(headers, rows) {
     [headers, ...rows].map((row) => row.map(escape).join(",")).join("\r\n")
   );
 }
+
+// Le bureau exporte ses colonnes personnalisées et son texte affiché. La CLI
+// conserve son journal Markdown à colonnes fixes et son fuseau configurable.
+export function markdown(title, headers, rows, links = []) {
+  if (!headers.length) throw new Error("Aucune colonne à exporter");
+  const escape = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/[\\`*_[\]{}()#+.!|~]/g, "\\$&")
+      .replace(/\r\n?|\n/g, "<br>");
+  const safeLink = (value) => {
+    if (typeof value !== "string" || !value) return null;
+    try {
+      const url = new URL(value);
+      if (!["http:", "https:"].includes(url.protocol)) return null;
+      url.username = "";
+      url.password = "";
+      return url.href.replace(
+        /[()|<>\\]/g,
+        (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+      );
+    } catch {
+      return null;
+    }
+  };
+  const line = (cells) => `| ${cells.join(" | ")} |`;
+  return [
+    `# ${escape(String(title ?? "").replace(/\r\n?|\n/g, " "))}`,
+    "",
+    line(headers.map(escape)),
+    line(headers.map(() => "---")),
+    ...rows.map((row, index) =>
+      line(
+        headers.map((_, column) => {
+          const value = escape(row[column]);
+          const url = safeLink(links[index]?.[column]);
+          if (url && value) return `[${value}](${url})`;
+          return row.length === 1 && headers.length > 1 && column === 0
+            ? `**${value}**`
+            : value;
+        }),
+      ),
+    ),
+    "",
+  ].join("\n");
+}
 export function exportTable(entries, columns) {
   return {
     headers: columns.map((c) => c.label),

@@ -21,6 +21,7 @@ JavaScript ; cette coexistence est volontaire et contrôlée par des tests de pa
 | Persistance | Écriture atomique dans le dossier cible ; autosave, échec d’écriture, restauration, migration des préférences sans modification du fichier ancien testés ; fermeture attend les écritures |
 | GitHub | Tests HTTP locaux : authentification factice, pagination, protection de l’origine, 401/403/404, quotas ; filtres auteur/date, PR et commentaires sans durée ; commentaires en lecture seule |
 | CSV | BOM UTF-8, CRLF, guillemets, virgules et retours à la ligne testés ; export depuis la fenêtre réelle puis contenu vérifié |
+| Markdown bureau | Colonnes personnalisées, texte affiché et totaux ; échappement Markdown/HTML, renvois HTTP(S), UTF-8 et journal vide testés ; fichier créé depuis la fenêtre Fedora puis contenu vérifié ; distinct du rendu CLI à colonnes fixes |
 | PDF | A4 paysage, pagination et en-têtes répétés ; extraction Unicode accentuée avec Poppler ; export depuis la fenêtre réelle ; renvois HTTP(S) conservés |
 | Impression | Dialogue système ouvert et annulé sous Fedora ; aucune impression physique lancée |
 | Distribution | Binaire optimisé et paquets RPM/DEB construits sous Fedora ; dépendance Git, fichier desktop, MIME et licences inspectés ; CI Linux/Windows/macOS sans publication ajoutée |
@@ -36,7 +37,7 @@ pnpm test:parity
 pnpm build
 ```
 
-La suite comporte 59 tests JavaScript, 17 tests du cœur Rust et 7 tests du bureau.
+La suite comporte 62 tests JavaScript, 17 tests du cœur Rust et 7 tests du bureau.
 Le corpus `doc/fixtures/metadata.json` contient des données synthétiques et ne
 représente jamais des événements de journal réels. Les tests de parité créent des
 commits dans un dépôt temporaire puis le suppriment.

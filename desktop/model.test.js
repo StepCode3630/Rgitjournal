@@ -12,7 +12,52 @@ import {
   gitHost,
   journalSummary,
   minutesLabel,
+  markdown,
 } from "./model.js";
+
+test("Markdown export preserves custom columns, Unicode and total rows", () => {
+  assert.equal(
+    markdown(
+      "Projet éà",
+      ["Tâche", "Activité", "Durée"],
+      [["Conception", "spec", "1h 30m"], ["Total du projet : 1h 30m"]],
+    ),
+    "# Projet éà\n\n| Tâche | Activité | Durée |\n| --- | --- | --- |\n| Conception | spec | 1h 30m |\n| **Total du projet : 1h 30m** |  |  |\n",
+  );
+});
+test("Markdown export escapes user markup and keeps safe HTTP links", () => {
+  const output = markdown(
+    "Projet\n# titre",
+    ["Description"],
+    [
+      ["<script>x</script> & a|b\r\n[texte](javascript:x) *gras* `code`"],
+      ["Suite"],
+      ["Lien"],
+    ],
+    [
+      [],
+      ["javascript:alert(1)"],
+      ["https://user:password@example.org/a(b)?x=1|2"],
+    ],
+  );
+  assert.ok(output.startsWith("# Projet \\# titre\n"));
+  assert.ok(
+    output.includes(
+      "&lt;script&gt;x&lt;/script&gt; &amp; a\\|b<br>\\[texte\\]\\(javascript:x\\) \\*gras\\* \\`code\\`",
+    ),
+  );
+  assert.ok(output.includes("| Suite |"));
+  assert.ok(output.includes("[Lien](https://example.org/a%28b%29?x=1%7C2)"));
+  assert.ok(!output.includes("user:password"));
+  assert.ok(!output.includes("](javascript:"));
+});
+test("Markdown export supports an empty journal and rejects missing columns", () => {
+  assert.equal(
+    markdown("Vide", ["Tâche"], []),
+    "# Vide\n\n| Tâche |\n| --- |\n",
+  );
+  assert.throws(() => markdown("Vide", [], []), /colonne/);
+});
 
 test("commit host icons recognize providers without assuming unknown URLs are GitHub", () => {
   for (const [url, icon] of [

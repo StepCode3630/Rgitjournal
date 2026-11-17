@@ -2,6 +2,7 @@ import {
   groupEntries,
   formatCell,
   csv,
+  markdown,
   exportTable,
   startDateIso,
   taskPrefixes,
@@ -496,12 +497,28 @@ const actions = {
     });
     if (path) status("CSV exporté : " + path);
   },
+  markdown: async () => {
+    if (!project) return;
+    const table = tableWithTotals();
+    const path = await invoke("export_file", {
+      format: "md",
+      content: markdown(
+        project.projectName,
+        table.headers,
+        table.rows,
+        table.links,
+      ),
+      table,
+      title: project.projectName,
+    });
+    if (path) status("Markdown exporté : " + path);
+  },
   pdf: async () => {
     if (!project) return;
     const path = await invoke("export_file", {
       format: "pdf",
       content: "",
-      table: tableForPdf(),
+      table: tableWithTotals(),
       title: project.projectName,
     });
     if (path) status("PDF exporté : " + path);
@@ -614,7 +631,7 @@ const actions = {
       null,
     ),
 };
-function tableForPdf() {
+function tableWithTotals() {
   const table = tableForExport();
   const rows = [...document.querySelectorAll("tbody tr")];
   table.rows = rows.map((row) =>

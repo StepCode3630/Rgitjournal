@@ -332,10 +332,18 @@ disponibles sous **Détail de la collecte**.
 |---|---|
 | Exporter en PDF | `Cmd+E` / `Ctrl+E` |
 | Exporter en CSV | `Cmd+Shift+E` / `Ctrl+Shift+E` |
+| Exporter en Markdown (`.md`) | Menu **Fichier > Exporter en Markdown** ou bouton **Markdown** |
 | Imprimer | `Cmd+P` / `Ctrl+P` |
 
 Le CSV reprend les colonnes et le texte affichés, en UTF-8 avec BOM et fins de ligne CRLF.
 Le PDF est généré en Rust au format A4 paysage, avec pagination et en-têtes répétés.
+Le Markdown est écrit en UTF-8 : titre du projet, colonnes et texte affichés,
+totaux journaliers et total du projet. Les retours à la ligne des cellules utilisent
+`<br>` ; les caractères Markdown et HTML des données sont échappés. Les renvois
+HTTP(S) des descriptions sont conservés. L’écriture utilise le même dialogue de
+sauvegarde et le même remplacement atomique que les autres exports.
+Cet export du bureau conserve les colonnes personnalisées ; le journal Markdown
+à colonnes fixes de la CLI et de la GitHub Action reste inchangé.
 L’impression passe par le dialogue système ; aucune impression n’est lancée sans confirmation.
 
 ### Sauvegarder
