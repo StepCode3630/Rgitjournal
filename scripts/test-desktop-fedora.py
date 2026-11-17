@@ -9,6 +9,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
  d=Path(tmp);repo=d/"repo é & '";repo.mkdir()
  def git(*args):return subprocess.check_output(['git','-C',str(repo),*args],stderr=subprocess.PIPE)
  git('init','-q','-b','main')
+ git('remote','add','origin','https://github.com/example/gui-fixture.git')
  git('-c','core.hooksPath='+str(repo),'-c','commit.gpgsign=false','-c','user.name=Test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','Tâche vérifiée [30m done]\nDescription <script>data</script>')
  p={'projectName':'Essai Fedora','me':'Test','journalStartDate':None,'exceptions':[],'columns':[{'label':'Date','source':'date','format':'date','field':'date'},{'label':'Tâche','source':'name','field':'name'},{'label':'Description','source':'description','field':'description'},{'label':'Durée','source':'duration','format':'duration','field':'duration'},{'label':'Statut','source':'status','field':'status'}]}
  project=repo/'essai.gitj';project.write_text(json.dumps(p))
@@ -24,10 +25,17 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
  def walk(n,depth=0):
   if n is None:return
   yield n
-  if depth<12:
+  if depth<18:
    for i in range(n.get_child_count()):
     try:yield from walk(n.get_child_at_index(i),depth+1)
     except Exception:pass
+ def wait_for(check):
+  deadline=time.time()+10
+  while time.time()<deadline:
+   value=check()
+   if value:return value
+   time.sleep(.15)
+  raise AssertionError('Résultat attendu absent')
  try:
   deadline=time.time()+30
   while time.time()<deadline:
@@ -38,28 +46,22 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    time.sleep(.3)
   else:raise RuntimeError('Interface non trouvée : '+repr(names))
   print('Journal Git rendu dans la webview Tauri.')
+  assert any(n.get_role_name()=='link' and n.get_name()=='Voir le commit sur GitHub' for n in walk(a))
   assert not any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
   toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions')
   assert toggle.get_action_iface().do_action(0)
   time.sleep(.25)
-  toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Masquer les actions')
+  toggle=wait_for(lambda:next((n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Masquer les actions'),None))
   assert any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
   assert toggle.get_action_iface().do_action(0)
   time.sleep(.25)
   assert not any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
-  toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions')
+  toggle=wait_for(lambda:next((n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions'),None))
   assert toggle.get_action_iface().do_action(0)
   print('Navigation masquée au lancement, affichage et fermeture validés.')
   for n in walk(a):
    if n.get_name()=='+ Ajouter une entrée':n.get_action_iface().do_action(0);break
   time.sleep(.4)
-  def wait_for(check):
-   deadline=time.time()+10
-   while time.time()<deadline:
-    value=check()
-    if value:return value
-    time.sleep(.15)
-   raise AssertionError('Résultat attendu absent')
   def find(role,name):
    return next((n for n in walk(app()) if n.get_role_name()==role and n.get_name()==name),None)
   def click(name):
@@ -77,7 +79,10 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    if select:xdo.xdo_send_keysequence_window(xd,int(window,16),b'ctrl+a',12000)
    xdo.xdo_enter_text_window(xd,int(window,16),text.encode(),12000)
   def set_field(name,text):
-   target=wait_for(lambda:find('entry',name));rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN);xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1);time.sleep(.1);type_text(text);time.sleep(.15)
+   target=wait_for(lambda:find('entry',name))
+   assert Atspi.Component.grab_focus(target)
+   time.sleep(.1);type_text(text)
+   wait_for(lambda:Atspi.Text.get_text(target,0,-1).lower()==text.lower())
   def select_field(name,index):
    target=wait_for(lambda:find('combo box',name))
    Atspi.Component.scroll_to(target,Atspi.ScrollType.ANYWHERE);time.sleep(.2)
@@ -92,7 +97,8 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   click('Enregistrer')
   assert not json.loads(project.read_text())['exceptions'], 'Statut obligatoire'
   select_field('Préfixe de la tâche (facultatif)',1)
-  select_field('Statut',1)
+  target=wait_for(lambda:find('radio button','Done'));assert target.get_action_iface().do_action(0)
+  wait_for(lambda:target.get_state_set().contains(Atspi.StateType.CHECKED))
   click('Enregistrer')
   wait_for(lambda:len(json.loads(project.read_text())['exceptions'])==1)
   saved=json.loads(project.read_text())['exceptions'][0]
@@ -101,7 +107,10 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   wait_for(lambda:find('button','Modifier'))
   edits=[n for n in walk(app()) if n.get_role_name()=='button' and n.get_name()=='Modifier']
   edits[0].get_action_iface().do_action(0)
-  set_field('Durée (min)','45');select_field('Statut',2);click('Enregistrer')
+  set_field('Durée (min)','45')
+  target=wait_for(lambda:find('radio button','WIP'));assert target.get_action_iface().do_action(0)
+  wait_for(lambda:target.get_state_set().contains(Atspi.StateType.CHECKED))
+  click('Enregistrer')
   wait_for(lambda:json.loads(project.read_text())['exceptions'][0]['duration']==45)
   assert json.loads(project.read_text())['exceptions'][0]['status']=='WIP'
   assert json.loads(project.read_text())['exceptions'][0]['date']==saved['date']
@@ -109,7 +118,14 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   click('Préférences');wait_for(lambda:find('button','Enregistrer'));click('Enregistrer')
   preferences=d/'config'/'com.gitjournal.desktop'/'settings.json'
   wait_for(lambda:preferences.exists() and json.loads(preferences.read_text()).get('githubToken')=='')
-  click('Statistiques');wait_for(lambda:find('button','Annuler'));click('Annuler')
+  click('Statistiques');wait_for(lambda:find('button','Annuler'))
+  def accessible_label(n):
+   try:return n.get_name() or Atspi.Text.get_text(n,0,-1)
+   except Exception:return ''
+  names=[accessible_label(n) for n in walk(app())]
+  assert any('Durée par jour' in name for name in names)
+  assert any('Répartition des statuts' in name for name in names)
+  click('Annuler')
   click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
   print('Préférences, statistiques et aide ouvertes et fermées.')
   def native_dialog(title):

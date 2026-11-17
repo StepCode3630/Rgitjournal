@@ -9,7 +9,62 @@ import {
   withTaskPrefix,
   entryDateParts,
   entryDateIso,
+  gitHost,
+  journalSummary,
+  minutesLabel,
 } from "./model.js";
+
+test("commit host icons recognize providers without assuming unknown URLs are GitHub", () => {
+  for (const [url, icon] of [
+    ["https://github.com/team/repo/commit/123", "github"],
+    ["https://gitlab.com/team/repo/-/commit/123", "gitlab"],
+    ["https://gitlab.example.org/team/repo", "gitlab"],
+    ["https://bitbucket.org/team/repo", "bitbucket"],
+    ["https://codeberg.org/team/repo", "codeberg"],
+    ["https://gitea.example.org/team/repo", "gitea"],
+    ["https://github.com.example.org/team/repo", "git"],
+    ["https://git.example.org/team/repo", "git"],
+    ["javascript:alert(1)", "git"],
+  ])
+    assert.equal(gitHost(url).icon, icon);
+  assert.equal(
+    gitHost("https://git.example.org/team/repo").label,
+    "git.example.org",
+  );
+});
+
+test("statistics use filtered entries, UTC days and historical statuses without estimating durations", () => {
+  const summary = journalSummary([
+    { date: "2026-11-17T00:30:00+02:00", duration: 30, status: "DONE" },
+    { date: "2026-11-17T12:00:00Z", duration: 45, status: "wip" },
+    { date: "2026-11-17T13:00:00Z", status: "" },
+    { date: "2026-11-17T14:00:00Z", duration: -5, status: "old" },
+  ]);
+  assert.equal(summary.totalMinutes, 70);
+  assert.equal(summary.activeDays, 2);
+  assert.equal(summary.entryCount, 4);
+  assert.equal(summary.days.length, 7);
+  assert.deepEqual(summary.days.slice(-2), [
+    { day: "2026-11-16", minutes: 30 },
+    { day: "2026-11-17", minutes: 40 },
+  ]);
+  assert.equal(summary.days[0].minutes, 0);
+  assert.deepEqual(
+    summary.statuses.map((s) => s.count),
+    [1, 1, 2],
+  );
+  assert.equal(minutesLabel(90), "1h 30min");
+  assert.equal(minutesLabel(-5), "−0h 5min");
+});
+
+test("statistics handle empty journals and invalid legacy numbers without NaN", () => {
+  assert.deepEqual(journalSummary([]).days, []);
+  assert.equal(journalSummary([]).totalMinutes, 0);
+  const summary = journalSummary([{ date: "invalid", duration: "invalid" }]);
+  assert.equal(summary.totalMinutes, 0);
+  assert.equal(summary.activeDays, 0);
+  assert.equal(summary.entryCount, 1);
+});
 
 test("task prefixes can be suggested, replaced and removed without duplicating the scope", () => {
   assert.equal(

@@ -9,6 +9,9 @@ import {
   withTaskPrefix,
   entryDateParts,
   entryDateIso,
+  gitHost,
+  journalSummary,
+  minutesLabel,
 } from "./model.js";
 import { condenseDescription } from "./description-filter.js";
 const invoke = (...args) => window.__TAURI__.core.invoke(...args);
@@ -43,6 +46,7 @@ async function run(fn) {
   }
 }
 function dialog(title, fields, submit, label = "Enregistrer") {
+  $("modal").classList.remove("stats-dialog");
   $("dialog-title").textContent = title;
   $("fields").replaceChildren(...fields);
   $("form-error").textContent = "";
@@ -114,6 +118,57 @@ function link(url, label) {
   };
   return a;
 }
+function commitLink(entry) {
+  const host = gitHost(entry.url);
+  const label = `Voir ${entry.commentId ? "le commentaire" : "le commit"} sur ${host.label}`;
+  const a = link(entry.url, undefined);
+  a.className = "host-link";
+  a.title = label;
+  a.setAttribute("aria-label", label);
+  a.append(
+    node("img", undefined, {
+      src: `icons/${host.icon}.svg`,
+      alt: "",
+      width: "20",
+      height: "20",
+    }),
+  );
+  return a;
+}
+
+function barChart(title, caption, items, format) {
+  const figure = node("figure", undefined, {
+    class: "stat-chart",
+    "aria-label": title,
+  });
+  figure.append(
+    node("figcaption", title),
+    node("p", caption, { class: "chart-caption" }),
+  );
+  const max = Math.max(1, ...items.map((item) => Math.abs(item.value)));
+  const signed = items.some((item) => item.value < 0);
+  const list = node("ul", undefined, { class: "chart-bars" });
+  for (const item of items) {
+    const row = node("li");
+    const track = node("span", undefined, {
+      class: `chart-track${signed ? " signed" : ""}`,
+      "aria-hidden": "true",
+    });
+    const bar = node("span", undefined, {
+      class: `chart-bar${item.value < 0 ? " negative" : ""}`,
+    });
+    bar.style.width = `${(Math.abs(item.value) / max) * (signed ? 50 : 100)}%`;
+    track.append(bar);
+    row.append(
+      node("span", item.label, { class: "chart-label" }),
+      track,
+      node("span", format(item.value), { class: "chart-value" }),
+    );
+    list.append(row);
+  }
+  figure.append(list);
+  return figure;
+}
 function render() {
   $("title").textContent = project
     ? `Journal de travail — ${project.projectName}`
@@ -128,7 +183,8 @@ function render() {
     head = node("thead"),
     hr = node("tr"),
     body = node("tbody");
-  for (const c of project.columns) hr.append(node("th", c.label));
+  for (const c of project.columns)
+    hr.append(node("th", c.label, { scope: "col" }));
   hr.append(node("th", "Actions", { class: "row-actions" }));
   head.append(hr);
   table.append(head, body);
@@ -141,11 +197,13 @@ function render() {
         row.tabIndex = 0;
         row.onclick = () => edit(entry);
         row.onkeydown = (e) => {
-          if (e.key === "Enter") edit(entry);
+          if (e.key === "Enter" && e.target === row) edit(entry);
         };
       }
       for (const column of project.columns) {
         const cell = node("td");
+        if (["date", "duration", "name", "description"].includes(column.source))
+          cell.classList.add(`cell-${column.source}`);
         if (column.field === "description") {
           const condensed = condenseDescription(
             formatCell(entry, column),
@@ -172,16 +230,15 @@ function render() {
           }
         } else if (column.format === "badge")
           cell.append(
-            node("span", formatCell(entry, column), { class: "badge" }),
+            node("span", formatCell(entry, column), {
+              class: `badge ${column.source === "status" && /^(done|wip)$/i.test(entry.status ?? "") ? `badge-${entry.status.toLowerCase()}` : ""}`,
+            }),
           );
         else cell.textContent = formatCell(entry, column);
         row.append(cell);
       }
       const actions = node("td", undefined, { class: "row-actions" });
-      if (entry.url)
-        actions.append(
-          link(entry.url, entry.commentId ? "GitHub ↗" : "Commit ↗"),
-        );
+      if (entry.url) actions.append(commitLink(entry));
       if (!entry.commentId) {
         const b = node("button", "Modifier");
         b.onclick = (e) => {
@@ -193,7 +250,7 @@ function render() {
       row.append(actions);
       body.append(row);
     }
-    const row = node("tr", undefined, { class: "total" });
+    const row = node("tr", undefined, { class: "total day-total" });
     row.append(
       node(
         "td",
@@ -204,7 +261,7 @@ function render() {
     body.append(row);
   }
   const total = entries.reduce((n, e) => n + Number(e.duration || 0), 0),
-    row = node("tr", undefined, { class: "total" });
+    row = node("tr", undefined, { class: "total project-total" });
   row.append(
     node("td", `Total du projet : ${Math.floor(total / 60)}h ${total % 60}m`, {
       colspan: String(project.columns.length + 1),
@@ -283,14 +340,22 @@ function edit(entry = {}) {
           ? "WIP"
           : "Done"
         : "";
-      const statusField = field(c.label, c.field, value, "text", [
-        "Done",
-        "WIP",
-      ]);
-      const select = statusField.querySelector("select");
-      select.required = true;
-      select.options[0].textContent = "Choisir un statut";
-      select.options[0].disabled = true;
+      const statusField = node("fieldset", undefined, {
+        class: "status-options",
+      });
+      statusField.append(node("legend", c.label));
+      for (const option of ["Done", "WIP"]) {
+        const label = node("label");
+        const input = node("input", undefined, {
+          type: "radio",
+          name: "status",
+          value: option,
+          required: "",
+        });
+        input.checked = value === option;
+        label.append(input, node("span", option));
+        statusField.append(label);
+      }
       return statusField;
     }
     const wrapper = field(
@@ -445,6 +510,53 @@ const actions = {
     if (project) window.print();
   },
   stats: () => {
+    const summary = journalSummary(entries);
+    const cards = node("div", undefined, { class: "stat-cards" });
+    for (const [label, value] of [
+      ["Durée déclarée", minutesLabel(summary.totalMinutes)],
+      ["Jours avec entrées", String(summary.activeDays)],
+      ["Entrées affichées", String(summary.entryCount)],
+    ]) {
+      const card = node("div", undefined, { class: "stat-card" });
+      card.append(node("span", label), node("strong", value));
+      cards.append(card);
+    }
+    const charts = node("div", undefined, { class: "stat-charts" });
+    if (summary.entryCount) {
+      if (summary.days.length)
+        charts.append(
+          barChart(
+            "Durée par jour",
+            "Les 7 derniers jours du journal · regroupement UTC",
+            summary.days.map((day) => ({
+              label: new Date(day.day).toLocaleDateString("fr-CH", {
+                day: "2-digit",
+                month: "2-digit",
+                timeZone: "UTC",
+              }),
+              value: day.minutes,
+            })),
+            minutesLabel,
+          ),
+        );
+      charts.append(
+        barChart(
+          "Répartition des statuts",
+          "Nombre d’entrées, y compris celles sans durée",
+          summary.statuses.map((item) => ({
+            label: item.label,
+            value: item.count,
+          })),
+          String,
+        ),
+      );
+    } else
+      charts.append(
+        node(
+          "p",
+          "Aucune entrée à représenter. Ouvrez un projet ou adaptez ses filtres.",
+        ),
+      );
     const list = node("dl");
     for (const [key, label] of [
       ["fromUser", "Commits correspondant aux filtres"],
@@ -456,14 +568,27 @@ const actions = {
     ]) {
       list.append(node("dt", label), node("dd", String(stats[key] ?? 0)));
     }
+    const details = node("details", undefined, { class: "collection-details" });
+    details.append(
+      node("summary", "Détail de la collecte"),
+      list,
+      node("p", "Auteurs Git trouvés : " + (stats.gitUsers ?? []).join(", ")),
+    );
     dialog(
       "Statistiques",
       [
-        list,
-        node("p", "Auteurs Git trouvés : " + (stats.gitUsers ?? []).join(", ")),
+        cards,
+        charts,
+        node(
+          "p",
+          "Durées issues des métadonnées et entrées manuelles du journal filtré ; aucune heure de travail n’est estimée.",
+          { class: "chart-caption" },
+        ),
+        details,
       ],
       null,
     );
+    $("modal").classList.add("stats-dialog");
   },
   help: () =>
     dialog(
@@ -522,9 +647,9 @@ $("cancel").onclick = () => $("modal").close();
 $("nav-toggle").onclick = () => {
   const nav = $("journal-actions");
   nav.hidden = !nav.hidden;
-  const label = nav.hidden ? "⌄" : "⌃";
+  const label = nav.hidden ? "Afficher les actions" : "Masquer les actions";
   const toggle = $("nav-toggle");
-  toggle.textContent = "Afficher les actions" ? label : "Masquer les actions";
+  toggle.textContent = nav.hidden ? "⌄" : "⌃";
   toggle.setAttribute("aria-expanded", String(!nav.hidden));
   toggle.setAttribute("aria-label", label);
   toggle.title = label;

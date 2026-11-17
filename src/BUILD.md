@@ -37,7 +37,7 @@ et actualiser, ou relancer `pnpm dev`. Aucun serveur Node n’est lancé par le 
 ## Tests
 
 ```bash
-pnpm test                 # 56 tests JavaScript : CLI, parsing, Markdown et modèle web
+pnpm test                 # 59 tests JavaScript : CLI, parsing, Markdown et modèle web
 pnpm test:rust            # moteur, projets, API simulée, session et PDF
 pnpm test:parity          # comparaison réelle JS/Rust sur un dépôt Git temporaire
 pnpm desktop:check        # compilation du bureau

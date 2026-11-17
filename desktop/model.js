@@ -7,6 +7,84 @@ export function columnValue(entry, column) {
   return value;
 }
 
+export function gitHost(value) {
+  let host;
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+    host = url.hostname.toLowerCase();
+  } catch {
+    return { label: "Dépôt Git", icon: "git" };
+  }
+  for (const [domain, label, icon] of [
+    ["github.com", "GitHub", "github"],
+    ["gitlab.com", "GitLab", "gitlab"],
+    ["bitbucket.org", "Bitbucket", "bitbucket"],
+    ["codeberg.org", "Codeberg", "codeberg"],
+  ]) {
+    if (host === domain || host.endsWith("." + domain)) return { label, icon };
+  }
+  for (const [prefix, label, icon] of [
+    ["gitlab.", "GitLab", "gitlab"],
+    ["gitea.", "Gitea", "gitea"],
+    ["bitbucket.", "Bitbucket", "bitbucket"],
+  ]) {
+    if (host.startsWith(prefix)) return { label, icon };
+  }
+  return { label: host, icon: "git" };
+}
+
+export function minutesLabel(value) {
+  const minutes = Math.abs(value);
+  return `${value < 0 ? "−" : ""}${Math.floor(minutes / 60)}h ${Math.round((minutes % 60) * 100) / 100}min`;
+}
+
+export function journalSummary(entries) {
+  const totals = new Map();
+  const statuses = new Map([
+    ["Done", 0],
+    ["WIP", 0],
+    ["Autre / non renseigné", 0],
+  ]);
+  let totalMinutes = 0;
+  for (const entry of entries) {
+    const duration = Number(entry.duration ?? 0);
+    const minutes = Number.isFinite(duration) ? duration : 0;
+    totalMinutes += minutes;
+    const date = new Date(entry.date);
+    if (Number.isFinite(date.getTime())) {
+      const day = date.toISOString().slice(0, 10);
+      totals.set(day, (totals.get(day) ?? 0) + minutes);
+    }
+    const status = String(entry.status ?? "")
+      .trim()
+      .toLowerCase();
+    const key =
+      status === "done"
+        ? "Done"
+        : status === "wip"
+          ? "WIP"
+          : "Autre / non renseigné";
+    statuses.set(key, statuses.get(key) + 1);
+  }
+  const lastDay = [...totals.keys()].sort().at(-1);
+  const days = lastDay
+    ? Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(lastDay + "T00:00:00Z");
+        date.setUTCDate(date.getUTCDate() - 6 + i);
+        const day = date.toISOString().slice(0, 10);
+        return { day, minutes: totals.get(day) ?? 0 };
+      })
+    : [];
+  return {
+    totalMinutes,
+    activeDays: totals.size,
+    entryCount: entries.length,
+    days,
+    statuses: [...statuses].map(([label, count]) => ({ label, count })),
+  };
+}
+
 // Date-only inputs use UTC, as in the original Electron creation form.
 export function startDateIso(value) {
   return value ? new Date(value).toISOString() : null;

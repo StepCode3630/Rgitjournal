@@ -293,7 +293,8 @@ Les commentaires ne peuvent pas être modifiés ni exclus dans GitJournal (les e
    Le préfixe est facultatif et le texte reste libre. Changer le préfixe conserve
    un éventuel scope, par exemple `feat(interface): ...` devient `fix(interface): ...`.
 4. Ajouter la description et la **durée en minutes** (par exemple `30`).
-5. Choisir obligatoirement le statut **Done** ou **WIP**.
+5. Choisir obligatoirement le statut **Done** ou **WIP** avec les boutons radio
+   (un seul choix à la fois).
 6. Cliquer sur **Enregistrer**.
 
 Ces contrôles s’appliquent aussi à la modification d’une entrée. Les anciens statuts
@@ -308,6 +309,22 @@ Cliquer sur une ligne du tableau pour ouvrir le formulaire de modification.
 - **Enregistrer** : sauvegarde les modifications
 - **Exclure** : retire un commit du journal (sans le supprimer de Git)
 - **Supprimer** : supprime une entrée manuelle
+
+### Consulter le journal et les statistiques
+
+Le tableau utilise des en-têtes sur une seule ligne, des lignes alternées et des
+totaux distincts. Il défile horizontalement si les colonnes dépassent la fenêtre.
+Les liens de commits affichent l’icône de GitHub, GitLab, Bitbucket, Codeberg ou
+Gitea selon l’adresse ; les autres hébergeurs ont une icône Git générique avec
+leur nom de domaine en infobulle. Les icônes sont embarquées et ne déclenchent
+aucune requête réseau pour être affichées.
+
+**Statistiques** présente la durée déclarée, le nombre de jours avec entrées et
+le nombre d’entrées affichées, puis deux graphiques : durée des sept derniers
+jours du journal (UTC) et répartition des statuts. Les anciens statuts et les
+statuts absents sont regroupés séparément. Ces valeurs utilisent le journal
+filtré, sans estimation du temps travaillé ; les compteurs techniques restent
+disponibles sous **Détail de la collecte**.
 
 ### Exporter
 
