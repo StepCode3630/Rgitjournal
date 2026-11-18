@@ -185,6 +185,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   click('Nouveau')
   set_field('Nom du projet','Nouveau test')
   set_field('Auteur(s) Git (virgule ou point-virgule)','Test')
+  set_field('URL du dépôt Git (facultative)','https://gitlab.com/example/gui-fixture.git')
   click('Enregistrer')
   native=wait_for(lambda:native_dialog('Projet GitJournal'))
   def accessible_text(n):
@@ -198,7 +199,9 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   new_project=repo/'nouveau.gitj';Atspi.EditableText.set_text_contents(filename,str(new_project))
   save=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Save','Enregistrer']);save.get_action_iface().do_action(0)
   wait_for(lambda:new_project.exists());assert json.loads(new_project.read_text())['projectName'].lower()=='nouveau test'
-  print('Création d’un nouveau projet via le dialogue natif validée.')
+  assert json.loads(new_project.read_text())['repoUrl']=='https://gitlab.com/example/gui-fixture'
+  wait_for(lambda:any(n.get_name()=='Voir le commit sur GitLab' for n in walk(app())))
+  print('Création du projet et lien GitLab pour le commit local validés.')
   time.sleep(.3);click('Ouvrir')
   native=wait_for(lambda:native_dialog('Projet GitJournal'))
   item=wait_for(lambda:next((n for n in walk(native) if n.get_name()=='essai.gitj'),None))

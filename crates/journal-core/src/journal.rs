@@ -80,7 +80,7 @@ pub fn remote(repo: &Path) -> String {
     normalize_remote(&raw)
 }
 
-fn normalize_remote(raw: &str) -> String {
+pub fn normalize_remote(raw: &str) -> String {
     let raw = raw.trim();
     let ssh = re(r"^git@([^:]+):(.+)$");
     let url = if let Some(c) = ssh.captures(raw) {
@@ -109,11 +109,34 @@ fn normalize_remote(raw: &str) -> String {
         .trim_end_matches('/')
         .trim_end_matches(".git")
         .to_owned();
+    if path.is_empty() {
+        return String::new();
+    }
     url.set_path(&path);
     url.to_string().trim_end_matches('/').to_owned()
 }
 
-pub fn apply_exceptions(entries: Vec<Value>, exceptions: &[Value]) -> Vec<Value> {
+fn commit_prefix(base: &str) -> String {
+    let Ok(url) = reqwest::Url::parse(base) else {
+        return String::new();
+    };
+    let host = url.host_str().unwrap_or("");
+    let route = if host == "bitbucket.org" {
+        "commits"
+    } else if host == "gitlab.com" || host.starts_with("gitlab.") {
+        "-/commit"
+    } else {
+        // GitHub, Codeberg, Gitea et Forgejo.
+        "commit"
+    };
+    format!("{base}/{route}/")
+}
+
+pub fn apply_exceptions(
+    entries: Vec<Value>,
+    exceptions: &[Value],
+    use_commit_link: bool,
+) -> Vec<Value> {
     let key = |v: &Value| {
         v["sha"]
             .as_str()
@@ -134,6 +157,9 @@ pub fn apply_exceptions(entries: Vec<Value>, exceptions: &[Value]) -> Vec<Value>
             let mut patched = json!({"source":e["source"],"branch":e["branch"]});
             if let Some(obj) = x.as_object() {
                 patched.as_object_mut().unwrap().extend(obj.clone());
+            }
+            if use_commit_link {
+                patched["url"] = e["url"].clone();
             }
             all.push(patched);
         } else {
@@ -177,6 +203,12 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
     }
     let raw = git(repo, &args)?;
     let base = remote(repo);
+    let configured = normalize_remote(project["repoUrl"].as_str().unwrap_or(""));
+    let prefix = commit_prefix(if configured.is_empty() {
+        &base
+    } else {
+        &configured
+    });
     let mut seen = HashSet::new();
     let mut entries = Vec::new();
     let mut count = 0;
@@ -201,10 +233,10 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
         e["date"] = json!(fields[2]);
         e["source"] = json!("commit");
         e["branch"] = json!(branch);
-        e["url"] = json!(if base.is_empty() {
+        e["url"] = json!(if prefix.is_empty() {
             String::new()
         } else {
-            format!("{base}/commit/{}", fields[0])
+            format!("{prefix}{}", fields[0])
         });
         entries.push(e);
     }
@@ -230,7 +262,7 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
         .iter()
         .filter(|x| x["type"] == "commitless")
         .count();
-    let entries = apply_exceptions(entries, &exceptions);
+    let entries = apply_exceptions(entries, &exceptions, !configured.is_empty());
     Ok(
         json!({"stats":{"gitUsers":users,"fromUser":count,"withMetadata":with_metadata,"afterExclusions":after_exclusions,"manualEntries":manual,"total":entries.len(),"issueComments":0,"issuesError":null},"entries":entries,"remoteBaseUrl":base}),
     )
@@ -249,6 +281,20 @@ mod tests {
             assert_eq!(normalize_remote(input), "https://github.com/owner/repo");
         }
         assert_eq!(normalize_remote("/local/repository"), "");
+    }
+    #[test]
+    fn web_routes_follow_the_host() {
+        for (host, route) in [
+            ("github.com", "commit"),
+            ("gitlab.com", "-/commit"),
+            ("gitlab.example.org", "-/commit"),
+            ("bitbucket.org", "commits"),
+            ("codeberg.org", "commit"),
+            ("gitea.example.org", "commit"),
+        ] {
+            let base = format!("https://{host}/group/repo");
+            assert_eq!(commit_prefix(&base), format!("{base}/{route}/"));
+        }
     }
     #[test]
     fn groom_text_and_first_metadata() {
@@ -274,7 +320,7 @@ mod tests {
             json!({"sha":"aaa","name":"new"}),
             json!({"type":"commitless","name":"manual"}),
         ];
-        let r = apply_exceptions(e, &x);
+        let r = apply_exceptions(e, &x, false);
         assert_eq!(r[0]["name"], "new");
         assert_eq!(r[0]["branch"], "main");
         assert_eq!(r[1]["source"], "manual");

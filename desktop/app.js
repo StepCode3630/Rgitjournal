@@ -425,6 +425,7 @@ const actions = {
       [
         field("Nom du projet", "projectName"),
         field("Auteur(s) Git (virgule ou point-virgule)", "me"),
+        field("URL du dépôt Git (facultative)", "repoUrl"),
         field("Date de début (facultative)", "since", "", "date"),
       ],
       async (form) => {

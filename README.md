@@ -163,13 +163,14 @@ Les menus natifs et les raccourcis restent disponibles lorsque la barre est masq
 ### Créer un nouveau projet
 
 1. Menu : **Fichier > Nouveau projet** (`Cmd+N` / `Ctrl+N`)
-2. Choisir où sauvegarder le fichier `.gitj` — **dans le dépôt Git à analyser, à la racine ou dans un sous-dossier**, par exemple `doc/Journal/mon-projet.gitj`
-3. Remplir le formulaire :
+2. Remplir le formulaire :
    - **Nom du projet** : affiché dans le journal et l'export
    - **Nom(s) d'utilisateur Git** : valeur(s) qui apparaissent dans `git log --author=…` (filtre vos commits). Séparer plusieurs noms par une virgule ou un point-virgule.
+   - **URL du dépôt Git** (facultative) pour ouvrir les commits dans un navigateur, par exemple `https://gitlab.com/groupe/projet`.
    - **Date de début** : optionnel, ignore les commits antérieurs
+3. Enregistrer le fichier `.gitj` dans le dépôt local, à la racine ou dans un sous-dossier.
 
-> Git retrouve le dépôt parent à partir du dossier du fichier `.gitj`. Les commits sont lus localement, sans téléchargement depuis GitHub. L'URL des liens de commits est détectée via `git remote get-url origin`.
+> Git retrouve le dépôt parent à partir du dossier du fichier `.gitj`. Les commits sont lus localement, sans téléchargement depuis GitHub. Les liens utilisent l’URL saisie ou, à défaut, celle du remote local `origin`. Sans l’une de ces adresses, les commits restent consultables dans le journal.
 
 ### Format du fichier `.gitj`
 
@@ -195,6 +196,7 @@ Les menus natifs et les raccourcis restent disponibles lorsque la barre est masq
 |---|---|---|
 | `projectName` | oui | Nom affiché dans le journal |
 | `me` | oui | Nom d'auteur git, ou liste de noms, pour filtrer vos commits |
+| `repoUrl` | non | URL du dépôt utilisée par le bureau pour les liens vers les commits (GitHub, GitLab, Bitbucket Cloud, Codeberg ou Gitea) |
 | `journalStartDate` | non | Date de début, format ISO 8601 |
 | `columns` | non pour les anciens fichiers | Colonnes affichées ; le bureau utilise les colonnes standard si ce champ est absent |
 | `exceptions` | oui | Entrées manuelles et modifications de commits |

@@ -112,7 +112,14 @@ try {
   const nested = JSON.parse(
     execFileSync(executable, [nestedDirectory, nestedFile], { encoding: "utf8" }),
   );
-  assert.deepEqual(nested, actual);
+  assert.deepEqual(nested, {
+    ...actual,
+    entries: actual.entries.map((entry) =>
+      entry.source === "commit"
+        ? { ...entry, url: legacy.repoUrl + "/commit/" + entry.sha }
+        : entry,
+    ),
+  });
   assert.equal(fs.readFileSync(nestedFile, "utf8"), original);
   console.log(
     "Parité Git JS/Rust validée : branches, auteurs, date, parsing, exclusions, modifications, entrées manuelles, statistiques et ancien projet dans un sous-dossier.",

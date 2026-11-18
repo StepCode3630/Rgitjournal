@@ -123,6 +123,19 @@ async fn create_project(config: Value, state: State<'_, Shared>) -> Result<Optio
                 p[k] = v.clone();
             }
         }
+        if let Some(raw) = config["repoUrl"]
+            .as_str()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            let url = engine::normalize_remote(raw);
+            if url.is_empty() {
+                return Err(
+                    "URL du dépôt invalide. Exemple : https://github.com/groupe/projet".into(),
+                );
+            }
+            p["repoUrl"] = json!(url);
+        }
         project::validate(&p)?;
         if p["projectName"]
             .as_str()
