@@ -221,6 +221,7 @@ function render() {
               );
             });
           });
+
           if (condensed.more) {
             cell.append(
               node("br"),
@@ -239,7 +240,6 @@ function render() {
         row.append(cell);
       }
       const actions = node("td", undefined, { class: "row-actions" });
-      if (entry.url) actions.append(commitLink(entry));
       if (!entry.commentId) {
         const b = node("button", "Modifier");
         b.onclick = (e) => {
@@ -248,6 +248,8 @@ function render() {
         };
         actions.append(b);
       }
+      if (entry.url) actions.append(commitLink(entry));
+
       row.append(actions);
       body.append(row);
       journalRows.set(entry, row);
@@ -430,7 +432,9 @@ let selectedTheme = localStorage.getItem("theme") ?? "light";
 function applyTheme() {
   document.documentElement.dataset.theme =
     selectedTheme === "system"
-      ? (systemTheme.matches ? "dark" : "light")
+      ? systemTheme.matches
+        ? "dark"
+        : "light"
       : selectedTheme;
 }
 
