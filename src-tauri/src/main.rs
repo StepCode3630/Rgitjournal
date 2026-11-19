@@ -407,7 +407,17 @@ fn main() {
                 true,
                 &[
                     &MenuItem::with_id(app, "refresh", "Actualiser", true, Some("CmdOrCtrl+R"))?,
-                    &PredefinedMenuItem::fullscreen(app, Some("Plein écran"))?,
+                    &MenuItem::with_id(
+                        app,
+                        "fullscreen",
+                        "Mode plein écran",
+                        true,
+                        Some(if cfg!(target_os = "macos") {
+                            "Cmd+Ctrl+F"
+                        } else {
+                            "F11"
+                        }),
+                    )?,
                 ],
             )?;
             #[cfg(target_os = "macos")]
@@ -458,7 +468,18 @@ fn main() {
             }
         })
         .on_menu_event(|app, event| {
-            let _ = app.emit("menu-action", event.id().as_ref());
+            if event.id().as_ref() == "fullscreen" {
+                if let Some(window) = app.get_webview_window("main") {
+                    let result = window
+                        .is_fullscreen()
+                        .and_then(|fullscreen| window.set_fullscreen(!fullscreen));
+                    if let Err(error) = result {
+                        let _ = app.emit("project-error", error.to_string());
+                    }
+                }
+            } else {
+                let _ = app.emit("menu-action", event.id().as_ref());
+            }
         })
         .invoke_handler(tauri::generate_handler![
             initial_project,

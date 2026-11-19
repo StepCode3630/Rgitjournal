@@ -73,6 +73,14 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    function.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.c_char_p,ctypes.c_uint]
   window=next(line.split()[0] for line in subprocess.check_output(['wmctrl','-lp'],text=True).splitlines() if len(line.split())>2 and line.split()[2]==str(proc.pid))
   subprocess.run(['wmctrl','-ia',window],check=True);time.sleep(.3)
+  def is_fullscreen():
+   return '_NET_WM_STATE_FULLSCREEN' in subprocess.check_output(['xprop','-id',window,'_NET_WM_STATE'],text=True)
+  assert not is_fullscreen()
+  xdo.xdo_send_keysequence_window(xd,0,b'F11',12000)
+  wait_for(is_fullscreen)
+  xdo.xdo_send_keysequence_window(xd,0,b'F11',12000)
+  wait_for(lambda:not is_fullscreen())
+  print('Entrée et sortie du plein écran vérifiées.')
   xdo.xdo_move_mouse.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int,ctypes.c_int]
   xdo.xdo_click_window.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.c_int]
   def type_text(text,select=True):
