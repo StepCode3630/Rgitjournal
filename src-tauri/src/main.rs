@@ -339,46 +339,31 @@ fn main() {
             let session = session::Session::new(settings, legacy).map_err(std::io::Error::other)?;
             app.manage(Arc::new(Mutex::new(session)));
             use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-            let mut file = Vec::new();
-            for (id, label) in [
-                ("new", "Nouveau projet"),
-                ("open", "Ouvrir projet"),
-                ("save", "Enregistrer"),
-                ("configure", "Configuration"),
-                ("pdf", "Exporter en PDF"),
-                ("csv", "Exporter en CSV"),
-                ("markdown", "Exporter en Markdown"),
-                ("print", "Imprimer"),
-                ("preferences", "Préférences"),
-            ] {
-                #[cfg(target_os = "macos")]
-                if id == "preferences" {
-                    continue;
-                }
-                let shortcut = match id {
-                    "new" => Some("CmdOrCtrl+N"),
-                    "open" => Some("CmdOrCtrl+O"),
-                    "save" => Some("CmdOrCtrl+S"),
-                    "pdf" => Some("CmdOrCtrl+E"),
-                    "csv" => Some("CmdOrCtrl+Shift+E"),
-                    "print" => Some("CmdOrCtrl+P"),
-                    "preferences" => Some("CmdOrCtrl+,"),
-                    _ => None,
-                };
-                file.push(MenuItem::with_id(app, id, label, true, shortcut)?);
-            }
-            let refs: Vec<&dyn tauri::menu::IsMenuItem<_>> = file
-                .iter()
-                .map(|i| i as &dyn tauri::menu::IsMenuItem<_>)
-                .collect();
-            let quit = PredefinedMenuItem::quit(app, Some("Quitter"))?;
-            #[cfg(not(target_os = "macos"))]
-            let refs = {
-                let mut refs = refs;
-                refs.push(&quit);
-                refs
+            let item = |id, label, shortcut: Option<&str>| {
+                MenuItem::with_id(app, id, label, true, shortcut)
             };
-            let file_menu = Submenu::with_items(app, "Fichier", true, &refs)?;
+            let export = Submenu::with_items(
+                app,
+                "Exporter",
+                true,
+                &[
+                    &item("pdf", "En PDF", Some("CmdOrCtrl+E"))?,
+                    &item("markdown", "En Markdown", None)?,
+                    &item("csv", "En CSV", Some("CmdOrCtrl+Shift+E"))?,
+                ],
+            )?;
+            let file_menu = Submenu::with_items(
+                app,
+                "Fichier",
+                true,
+                &[
+                    &item("new", "Nouveau projet", Some("CmdOrCtrl+N"))?,
+                    &item("open", "Ouvrir un projet", Some("CmdOrCtrl+O"))?,
+                    &item("save", "Enregistrer", Some("CmdOrCtrl+S"))?,
+                    &export,
+                    &item("print", "Imprimer", Some("CmdOrCtrl+P"))?,
+                ],
+            )?;
             let edit = Submenu::with_items(
                 app,
                 "Édition",
@@ -392,13 +377,16 @@ fn main() {
                     &PredefinedMenuItem::select_all(app, None)?,
                 ],
             )?;
-            let help = Submenu::with_items(
+            let stats = item("stats", "Statistiques", None)?;
+            let help = item("help", "Aide", None)?;
+            let theme = Submenu::with_items(
                 app,
-                "Aide",
+                "Thème",
                 true,
                 &[
-                    &MenuItem::with_id(app, "help", "Aide", true, None::<&str>)?,
-                    &MenuItem::with_id(app, "stats", "Statistiques", true, None::<&str>)?,
+                    &item("theme-light", "Mode clair", None)?,
+                    &item("theme-dark", "Mode sombre", None)?,
+                    &item("theme-system", "Mode système", None)?,
                 ],
             )?;
             let view = Submenu::with_items(
@@ -406,7 +394,8 @@ fn main() {
                 "Affichage",
                 true,
                 &[
-                    &MenuItem::with_id(app, "refresh", "Actualiser", true, Some("CmdOrCtrl+R"))?,
+                    &item("refresh", "Actualiser", Some("CmdOrCtrl+R"))?,
+                    &theme,
                     &MenuItem::with_id(
                         app,
                         "fullscreen",
@@ -420,6 +409,18 @@ fn main() {
                     )?,
                 ],
             )?;
+            let token = Submenu::with_items(
+                app,
+                "Token",
+                true,
+                &[&item("preferences", "GitHub", Some("CmdOrCtrl+,"))?],
+            )?;
+            let configuration = Submenu::with_items(
+                app,
+                "Configuration",
+                true,
+                &[&token, &item("configure", "Structure JSON", None)?],
+            )?;
             #[cfg(target_os = "macos")]
             {
                 let application = Submenu::with_items(
@@ -428,25 +429,31 @@ fn main() {
                     true,
                     &[
                         &PredefinedMenuItem::about(app, None, None)?,
-                        &MenuItem::with_id(
-                            app,
-                            "preferences",
-                            "Préférences…",
-                            true,
-                            Some("CmdOrCtrl+,"),
-                        )?,
                         &PredefinedMenuItem::hide(app, None)?,
                         &PredefinedMenuItem::hide_others(app, None)?,
-                        &quit,
+                        &PredefinedMenuItem::quit(app, Some("Quitter"))?,
                     ],
                 )?;
+                let stats = Submenu::with_items(app, "Statistiques", true, &[&stats])?;
+                let help = Submenu::with_items(app, "Aide", true, &[&help])?;
                 app.set_menu(Menu::with_items(
                     app,
-                    &[&application, &file_menu, &edit, &view, &help],
+                    &[
+                        &application,
+                        &file_menu,
+                        &edit,
+                        &view,
+                        &configuration,
+                        &stats,
+                        &help,
+                    ],
                 )?)?;
             }
             #[cfg(not(target_os = "macos"))]
-            app.set_menu(Menu::with_items(app, &[&file_menu, &edit, &view, &help])?)?;
+            app.set_menu(Menu::with_items(
+                app,
+                &[&file_menu, &edit, &view, &configuration, &stats, &help],
+            )?)?;
             Ok(())
         })
         .on_window_event(|window, event| {

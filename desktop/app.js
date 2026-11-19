@@ -34,16 +34,12 @@ function status(message, error = false) {
 async function run(fn) {
   if (busy) return;
   busy = true;
-  document.querySelectorAll("nav button").forEach((b) => (b.disabled = true));
   try {
     await fn();
   } catch (e) {
     status(String(e), true);
   } finally {
     busy = false;
-    document
-      .querySelectorAll("nav button")
-      .forEach((b) => (b.disabled = $("modal").open));
   }
 }
 function dialog(title, fields, submit, label = "Enregistrer") {
@@ -437,28 +433,16 @@ function setTheme(theme) {
   localStorage.setItem("theme", theme);
   selectedTheme = theme;
   applyTheme();
+  status(themes[theme]);
 }
 
 systemTheme.addEventListener("change", applyTheme);
 applyTheme();
 
 const actions = {
-  theme: () => {
-    const options = Object.entries(themes).map(([value, label]) => {
-      const wrapper = node("label");
-      const input = node("input", undefined, {
-        type: "radio",
-        name: "theme",
-        value,
-      });
-      input.checked = value === selectedTheme;
-      wrapper.append(input, node("span", label));
-      return wrapper;
-    });
-    const group = node("fieldset", undefined, { class: "status-options" });
-    group.append(...options);
-    dialog("Thème", [group], async (form) => setTheme(form.get("theme")));
-  },
+  "theme-light": () => setTheme("light"),
+  "theme-dark": () => setTheme("dark"),
+  "theme-system": () => setTheme("system"),
   new: () => {
     dialog(
       "Nouveau projet",
@@ -512,7 +496,7 @@ const actions = {
   preferences: async () => {
     const prefs = await invoke("preferences");
     dialog(
-      "Préférences",
+      "Token GitHub",
       [
         field(
           "Token GitHub (vide pour utiliser GH_TOKEN / GITHUB_TOKEN / gh)",
@@ -666,7 +650,7 @@ const actions = {
         ),
         node(
           "p",
-          "Raccourcis : Ctrl/Cmd+N nouveau, O ouvrir, S enregistrer, R actualiser, E PDF, Maj+E CSV, P imprimer. Préférences : Ctrl/Cmd+virgule. Zoom : Ctrl/Cmd + / − / 0.",
+          "Raccourcis : Ctrl/Cmd+N nouveau, O ouvrir, S enregistrer, R actualiser, E PDF, Maj+E CSV, P imprimer. Token GitHub : Ctrl/Cmd+virgule. Zoom : Ctrl/Cmd + / − / 0.",
         ),
       ],
       null,
@@ -698,23 +682,8 @@ function tableForExport() {
   );
   return table;
 }
-$("modal").addEventListener("close", () =>
-  document.querySelectorAll("nav button").forEach((b) => (b.disabled = busy)),
-);
 $("cancel").onclick = () => $("modal").close();
-$("nav-toggle").onclick = () => {
-  const nav = $("journal-actions");
-  nav.hidden = !nav.hidden;
-  const label = nav.hidden ? "Afficher les actions" : "Masquer les actions";
-  const toggle = $("nav-toggle");
-  toggle.textContent = nav.hidden ? "⌄" : "⌃";
-  toggle.setAttribute("aria-expanded", String(!nav.hidden));
-  toggle.setAttribute("aria-label", label);
-  toggle.title = label;
-};
 $("add").onclick = () => edit();
-for (const button of document.querySelectorAll("[data-action]"))
-  button.onclick = () => run(actions[button.dataset.action]);
 let zoom = 1;
 document.addEventListener("keydown", (event) => {
   if (!(event.ctrlKey || event.metaKey)) return;

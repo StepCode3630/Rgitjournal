@@ -47,18 +47,18 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   else:raise RuntimeError('Interface non trouvée : '+repr(names))
   print('Journal Git rendu dans la webview Tauri.')
   assert any(n.get_role_name()=='link' and n.get_name()=='Voir le commit sur GitHub' for n in walk(a))
-  assert not any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
-  toggle=next(n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions')
-  assert toggle.get_action_iface().do_action(0)
-  time.sleep(.25)
-  toggle=wait_for(lambda:next((n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Masquer les actions'),None))
-  assert any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
-  assert toggle.get_action_iface().do_action(0)
-  time.sleep(.25)
-  assert not any(n.get_role_name()=='button' and n.get_name()=='Nouveau' for n in walk(a))
-  toggle=wait_for(lambda:next((n for n in walk(a) if n.get_role_name()=='button' and n.get_name()=='Afficher les actions'),None))
-  assert toggle.get_action_iface().do_action(0)
-  print('Navigation masquée au lancement, affichage et fermeture validés.')
+  bar=next(n for n in walk(a) if n.get_role_name()=='menu bar')
+  assert [bar.get_child_at_index(i).get_name() for i in range(bar.get_child_count())]==[
+   'Fichier','Édition','Affichage','Configuration','Statistiques','Aide']
+  assert not any(n.get_name()=='Afficher les actions' for n in walk(a))
+  def menu(*path):
+   root=next(n for n in walk(app()) if n.get_role_name()=='menu bar')
+   for label in path:
+    root=next(root.get_child_at_index(i) for i in range(root.get_child_count())
+              if root.get_child_at_index(i).get_name()==label)
+    assert root.get_action_iface().do_action(0),label
+    time.sleep(.25)
+  print('Ordre de la barre native vérifié.')
   for n in walk(a):
    if n.get_name()=='+ Ajouter une entrée':n.get_action_iface().do_action(0);break
   time.sleep(.4)
@@ -123,20 +123,18 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert json.loads(project.read_text())['exceptions'][0]['status']=='WIP'
   assert json.loads(project.read_text())['exceptions'][0]['date']==saved['date']
   print('Modification et persistance validées.')
-  def theme_is(label):
-   return (target := find('radio button',label)) and target.get_state_set().contains(Atspi.StateType.CHECKED)
-  click('Thème')
-  wait_for(lambda:theme_is('Mode clair'))
-  for label in ['Mode système','Mode sombre']:
-   assert wait_for(lambda:find('radio button',label)).get_action_iface().do_action(0)
-   click('Enregistrer')
-   click('Thème')
-   wait_for(lambda:theme_is(label))
-  click('Annuler')
-  click('Préférences');wait_for(lambda:find('button','Enregistrer'));click('Enregistrer')
+  for label in ['Mode système','Mode sombre','Mode clair','Mode sombre']:
+   menu('Affichage','Thème',label)
+   wait_for(lambda:any(Atspi.Text.get_text(n,0,-1)==label
+                       for n in walk(app()) if n.get_role_name()=='status bar' and n.get_text_iface()))
+  print('Trois modes sélectionnés depuis le sous-menu Thème.')
+  menu('Affichage','Actualiser')
+  menu('Fichier','Enregistrer')
+  menu('Configuration','Structure JSON');click('Annuler')
+  menu('Configuration','Token','GitHub');click('Enregistrer')
   preferences=d/'config'/'com.gitjournal.desktop'/'settings.json'
   wait_for(lambda:preferences.exists() and json.loads(preferences.read_text()).get('githubToken')=='')
-  click('Statistiques');wait_for(lambda:find('button','Annuler'))
+  menu('Statistiques');wait_for(lambda:find('button','Annuler'))
   def accessible_label(n):
    try:return n.get_name() or Atspi.Text.get_text(n,0,-1)
    except Exception:return ''
@@ -144,7 +142,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert any('Durée par jour' in name for name in names)
   assert any('Répartition des statuts' in name for name in names)
   click('Annuler')
-  click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
+  menu('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
   print('Préférences, statistiques et aide ouvertes et fermées.')
   def native_dialog(title):
    candidate=app()
@@ -153,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
      window=candidate.get_child_at_index(j)
      if title in window.get_name():return window
   for label,extension in [('CSV','csv'),('PDF','pdf'),('Markdown','md')]:
-   click(label)
+   menu('Fichier','Exporter','En '+label)
    native=wait_for(lambda:native_dialog('Exporter le journal en '+label))
    save=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Save','Enregistrer'])
    assert save.get_action_iface().do_action(0)
@@ -173,9 +171,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
     assert '**Total du projet' in text and 'WIP' in text
    print(label+' créé depuis la fenêtre Tauri et contenu vérifié.')
    time.sleep(.3)
-  target=wait_for(lambda:find('button','Imprimer'))
-  rect=Atspi.Component.get_extents(target,Atspi.CoordType.SCREEN)
-  xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)
+  menu('Fichier','Imprimer')
   native=wait_for(lambda:native_dialog('Print') or native_dialog('Imprimer'))
   cancel=next(n for n in walk(native) if n.get_role_name()=='button' and n.get_name() in ['Cancel','Annuler'])
   assert cancel.get_action_iface().do_action(0)
@@ -199,10 +195,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   print('Dernier projet restauré au redémarrage, sans argument de fichier.')
   window=next(line.split()[0] for line in subprocess.check_output(['wmctrl','-lp'],text=True).splitlines() if len(line.split())>2 and line.split()[2]==str(proc.pid))
   subprocess.run(['wmctrl','-ia',window],check=True)
-  click('Afficher les actions')
-  click('Thème');wait_for(lambda:theme_is('Mode sombre'));click('Annuler')
-  print('Trois thèmes sélectionnables et choix conservé au redémarrage.')
-  click('Nouveau')
+  menu('Fichier','Nouveau projet')
   set_field('Nom du projet','Nouveau test')
   set_field('Auteur(s) Git (virgule ou point-virgule)','Test')
   set_field('URL du dépôt Git (facultative)','https://gitlab.com/example/gui-fixture.git')
@@ -222,7 +215,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert json.loads(new_project.read_text())['repoUrl']=='https://gitlab.com/example/gui-fixture'
   wait_for(lambda:any(n.get_name()=='Voir le commit sur GitLab' for n in walk(app())))
   print('Création du projet et lien GitLab pour le commit local validés.')
-  time.sleep(.3);click('Ouvrir')
+  time.sleep(.3);menu('Fichier','Ouvrir un projet')
   native=wait_for(lambda:native_dialog('Projet GitJournal'))
   item=wait_for(lambda:next((n for n in walk(native) if n.get_name()=='essai.gitj'),None))
   rect=Atspi.Component.get_extents(item,Atspi.CoordType.SCREEN)

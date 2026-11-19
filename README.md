@@ -78,7 +78,7 @@ aucune installation universelle Linux n’est fournie.
 
 ### Ouvrir votre journal après installation
 
-Dans GitJournal, choisir **Fichier > Ouvrir projet** (`Ctrl+O`, ou `Cmd+O` sur macOS),
+Dans GitJournal, choisir **Fichier > Ouvrir un projet** (`Ctrl+O`, ou `Cmd+O` sur macOS),
 puis sélectionner le `.gitj` situé dans le dépôt local, y compris dans un sous-dossier
 comme `doc/Journal/p_fun.gitj`. Aucun accès GitHub n’est nécessaire pour lire les commits.
 
@@ -156,9 +156,18 @@ d’installation de votre système ci-dessus. Reconstruire le paquet après une 
 
 ## Utilisation
 
-La barre d’actions est masquée à chaque lancement. Cliquer sur **Afficher les actions**
-en haut à droite pour la déployer, puis sur la croix **×** pour la masquer.
-Les menus natifs et les raccourcis restent disponibles lorsque la barre est masquée.
+La barre de menus native regroupe **Fichier**, **Édition**, **Affichage**,
+**Configuration**, **Statistiques** et **Aide**. Pour exporter un rapport,
+ouvrir **Fichier → Exporter** et choisir **En PDF**, **En Markdown** ou **En CSV**.
+
+Dans **Affichage → Thème**, choisir **Mode clair** (par défaut), **Mode sombre**
+ou **Mode système**. Le mode système suit l’apparence détectée par la vue web.
+Le choix est mémorisé pour les prochains lancements. L’impression utilise le thème clair.
+**Affichage → Mode plein écran** permet d’entrer et de sortir du plein écran.
+
+**Configuration → Token → GitHub** ouvre le réglage du jeton.
+**Configuration → Structure JSON** ouvre le fichier projet dans l’éditeur intégré.
+Sur macOS, **Statistiques** et **Aide** contiennent chacune une seule commande.
 
 ### Créer un nouveau projet
 
@@ -223,7 +232,7 @@ Pour afficher une liste déroulante dans le formulaire d'ajout ou de modificatio
 
 ### Ouvrir un projet existant
 
-Menu : **Fichier > Ouvrir projet** (`Cmd+O` / `Ctrl+O`)
+Menu : **Fichier > Ouvrir un projet** (`Cmd+O` / `Ctrl+O`)
 
 Vous pouvez ouvrir un fichier placé dans un sous-dossier, par exemple
 `P_FUN/doc/Journal/p_fun.gitj`. Les anciens fichiers sans `columns` sont pris en
@@ -283,7 +292,7 @@ Contrairement aux commits, **tous les commentaires sont inclus**, même sans dur
 
 Les commentaires sont filtrés par auteur : leur login GitHub doit figurer dans `me` ou dans `githubUsers` (sans `.gitj`, tous les auteurs sont pris en compte).
 
-Dans l'application, activer `"includeIssues": true` dans le `.gitj`. Le token GitHub se définit dans **Préférences** (token fine-grained avec la permission *Issues : Read-only*) ; à défaut, il est lu dans `GH_TOKEN` / `GITHUB_TOKEN`, puis via `gh auth token` (GitHub CLI). Un dépôt public fonctionne sans token, dans la limite de 60 requêtes par heure.
+Dans l'application, activer `"includeIssues": true` dans le `.gitj`. Le token GitHub se définit dans **Configuration → Token → GitHub** (token fine-grained avec la permission *Issues : Read-only*) ; à défaut, il est lu dans `GH_TOKEN` / `GITHUB_TOKEN`, puis via `gh auth token` (GitHub CLI). Un dépôt public fonctionne sans token, dans la limite de 60 requêtes par heure.
 
 Les commentaires ne peuvent pas être modifiés ni exclus dans GitJournal (les exceptions du `.gitj` ne s'appliquent qu'aux commits) : pour corriger un commentaire, le modifier sur GitHub.
 
@@ -334,7 +343,7 @@ disponibles sous **Détail de la collecte**.
 |---|---|
 | Exporter en PDF | `Cmd+E` / `Ctrl+E` |
 | Exporter en CSV | `Cmd+Shift+E` / `Ctrl+Shift+E` |
-| Exporter en Markdown (`.md`) | Menu **Fichier > Exporter en Markdown** ou bouton **Markdown** |
+| Exporter en Markdown (`.md`) | Menu **Fichier → Exporter → En Markdown** |
 | Imprimer | `Cmd+P` / `Ctrl+P` |
 
 Le CSV reprend les colonnes et le texte affichés, en UTF-8 avec BOM et fins de ligne CRLF.
@@ -355,7 +364,7 @@ Menu : **Fichier > Enregistrer** (`Cmd+S` / `Ctrl+S`)
 Les ajouts, modifications, exclusions et suppressions sont enregistrés immédiatement.
 En cas d’échec d’écriture, l’erreur reste visible et l’état enregistré n’est pas remplacé.
 Les écritures utilisent un temporaire dans le dossier cible et la fermeture attend les écritures en cours.
-Le menu **Configuration** permet d’éditer le JSON du `.gitj`, y compris les colonnes personnalisées.
+**Configuration → Structure JSON** permet d’éditer le JSON du `.gitj`, y compris les colonnes personnalisées.
 
 ## Journal automatique avec GitHub Actions
 
@@ -394,12 +403,14 @@ node src/cli.js --help
 | Raccourci | Action |
 |---|---|
 | `Cmd/Ctrl + N` | Nouveau projet |
-| `Cmd/Ctrl + O` | Ouvrir projet |
+| `Cmd/Ctrl + O` | Ouvrir un projet |
 | `Cmd/Ctrl + S` | Enregistrer |
 | `Cmd/Ctrl + E` | Exporter en PDF |
 | `Cmd/Ctrl + Shift + E` | Exporter en CSV |
 | `Cmd/Ctrl + P` | Imprimer |
 | `Cmd/Ctrl + R` | Actualiser |
+| `F11` (Windows/Linux), `Ctrl + Cmd + F` (macOS) | Basculer le plein écran |
+| `Cmd/Ctrl + ,` | Token GitHub |
 | `Cmd/Ctrl + +/-` | Zoom |
 
 ## Versionner vos projets
