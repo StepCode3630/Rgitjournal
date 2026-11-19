@@ -115,6 +115,16 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert json.loads(project.read_text())['exceptions'][0]['status']=='WIP'
   assert json.loads(project.read_text())['exceptions'][0]['date']==saved['date']
   print('Modification et persistance validées.')
+  def theme_is(label):
+   return (target := find('radio button',label)) and target.get_state_set().contains(Atspi.StateType.CHECKED)
+  click('Thème')
+  wait_for(lambda:theme_is('Mode clair'))
+  for label in ['Mode système','Mode sombre']:
+   assert wait_for(lambda:find('radio button',label)).get_action_iface().do_action(0)
+   click('Enregistrer')
+   click('Thème')
+   wait_for(lambda:theme_is(label))
+  click('Annuler')
   click('Préférences');wait_for(lambda:find('button','Enregistrer'));click('Enregistrer')
   preferences=d/'config'/'com.gitjournal.desktop'/'settings.json'
   wait_for(lambda:preferences.exists() and json.loads(preferences.read_text()).get('githubToken')=='')
@@ -182,6 +192,8 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   window=next(line.split()[0] for line in subprocess.check_output(['wmctrl','-lp'],text=True).splitlines() if len(line.split())>2 and line.split()[2]==str(proc.pid))
   subprocess.run(['wmctrl','-ia',window],check=True)
   click('Afficher les actions')
+  click('Thème');wait_for(lambda:theme_is('Mode sombre'));click('Annuler')
+  print('Trois thèmes sélectionnables et choix conservé au redémarrage.')
   click('Nouveau')
   set_field('Nom du projet','Nouveau test')
   set_field('Auteur(s) Git (virgule ou point-virgule)','Test')

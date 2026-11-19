@@ -418,7 +418,47 @@ function edit(entry = {}) {
     },
   );
 }
+const systemTheme = matchMedia("(prefers-color-scheme: dark)");
+const themes = {
+  light: "Mode clair",
+  dark: "Mode sombre",
+  system: "Mode système",
+};
+let selectedTheme = localStorage.getItem("theme") ?? "light";
+
+function applyTheme() {
+  document.documentElement.dataset.theme =
+    selectedTheme === "system"
+      ? (systemTheme.matches ? "dark" : "light")
+      : selectedTheme;
+}
+
+function setTheme(theme) {
+  localStorage.setItem("theme", theme);
+  selectedTheme = theme;
+  applyTheme();
+}
+
+systemTheme.addEventListener("change", applyTheme);
+applyTheme();
+
 const actions = {
+  theme: () => {
+    const options = Object.entries(themes).map(([value, label]) => {
+      const wrapper = node("label");
+      const input = node("input", undefined, {
+        type: "radio",
+        name: "theme",
+        value,
+      });
+      input.checked = value === selectedTheme;
+      wrapper.append(input, node("span", label));
+      return wrapper;
+    });
+    const group = node("fieldset", undefined, { class: "status-options" });
+    group.append(...options);
+    dialog("Thème", [group], async (form) => setTheme(form.get("theme")));
+  },
   new: () => {
     dialog(
       "Nouveau projet",
