@@ -13,6 +13,8 @@ import {
   journalSummary,
   minutesLabel,
   markdown,
+  exportEntries,
+  exportPeriod,
 } from "./model.js";
 
 test("Markdown export preserves custom columns, Unicode and total rows", () => {
@@ -170,5 +172,58 @@ test("CSV includes BOM CRLF and escapes data without interpreting HTML", () => {
   assert.equal(
     csv(["Tâche"], [['a,"b"\nc'], ["<script>"]]),
     '\uFEFFTâche\r\n"a,""b""\nc"\r\n<script>',
+  );
+});
+
+test("export periods use inclusive UTC days, Monday weeks and leap months", () => {
+  assert.deepEqual(exportPeriod({ period: "week", reference: "2026-01-01" }), {
+    start: "2025-12-29",
+    end: "2026-01-04",
+  });
+  assert.deepEqual(exportPeriod({ period: "month", reference: "2024-02-29" }), {
+    start: "2024-02-01",
+    end: "2024-02-29",
+  });
+  assert.throws(() =>
+    exportPeriod({ period: "range", start: "2026-01-02", end: "2026-01-01" }),
+  );
+});
+
+test("export combines date, author, source and status on the original entries", () => {
+  const matching = {
+    date: "2026-01-02T01:00:00+01:00",
+    author: ["Alice", "Béa"],
+    source: "manual",
+    status: "WIP",
+  };
+  const entries = [
+    matching,
+    { ...matching, date: "2026-01-02T00:59:59+01:00" },
+    { ...matching, author: "Alice" },
+    { ...matching, source: "commit" },
+    { ...matching, status: "done" },
+  ];
+  assert.deepEqual(
+    exportEntries(entries, {
+      period: "range",
+      start: "2026-01-02",
+      end: "2026-01-02",
+      author: "Béa",
+      source: "manual",
+      status: "wip",
+    }),
+    [matching],
+  );
+  assert.equal(exportEntries(entries).length, entries.length);
+});
+
+test("export formats support CSV separator and BOM options and a titleless Markdown table", () => {
+  assert.equal(
+    csv(["Tâche", "Auteur"], [[";", "a,b"]], { separator: ";", bom: false }),
+    'Tâche;Auteur\r\n";";a,b',
+  );
+  assert.equal(
+    markdown("Projet", ["Tâche"], [["Essai"]], [], { heading: false }),
+    "| Tâche |\n| --- |\n| Essai |\n",
   );
 });

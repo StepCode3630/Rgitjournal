@@ -166,20 +166,91 @@ export function groupEntries(entries) {
     minutes: entries.reduce((n, e) => n + Number(e.duration || 0), 0),
   }));
 }
-export function csv(headers, rows) {
-  const escape = (value) =>
-    /[",\r\n]/.test(String(value ?? ""))
-      ? `"${String(value).replaceAll('"', '""')}"`
-      : String(value ?? "");
+function utcDay(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(value + "T00:00:00Z");
+  return Number.isFinite(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+    ? date
+    : null;
+}
+
+export function exportPeriod({ period, start, end, reference }) {
+  if (!period || period === "all") return {};
+  if (period === "range") {
+    if (!utcDay(start) || !utcDay(end) || start > end)
+      throw new Error(
+        "Indiquez une date de début et une date de fin dans l’ordre.",
+      );
+    return { start, end };
+  }
+  const first = utcDay(reference);
+  if (!first)
+    throw new Error("Choisissez une date dans la semaine ou le mois souhaité.");
+  const last = new Date(first);
+  if (period === "week") {
+    first.setUTCDate(first.getUTCDate() - ((first.getUTCDay() + 6) % 7));
+    last.setTime(first.getTime());
+    last.setUTCDate(last.getUTCDate() + 6);
+  } else if (period === "month") {
+    first.setUTCDate(1);
+    last.setUTCMonth(last.getUTCMonth() + 1, 0);
+  } else {
+    throw new Error("Période d’export inconnue.");
+  }
+  return {
+    start: first.toISOString().slice(0, 10),
+    end: last.toISOString().slice(0, 10),
+  };
+}
+
+export function exportEntries(entries, options = {}) {
+  const { start, end } = exportPeriod(options);
+  return entries.filter((entry) => {
+    const day = new Date(entry.date).toISOString().slice(0, 10);
+    const status = String(entry.status ?? "")
+      .trim()
+      .toLowerCase();
+    const author = Array.isArray(entry.author) ? entry.author : [entry.author];
+    const source = ["issue", "pr"].includes(entry.source)
+      ? "github"
+      : entry.source;
+    return (
+      (!start || (day >= start && day <= end)) &&
+      (!options.author || author.includes(options.author)) &&
+      (!options.source || source === options.source) &&
+      (!options.status ||
+        (options.status === "other"
+          ? !["done", "wip"].includes(status)
+          : status === options.status))
+    );
+  });
+}
+
+export function csv(headers, rows, { separator = ",", bom = true } = {}) {
+  const escape = (value) => {
+    const cell = String(value ?? "");
+    return /["\r\n]/.test(cell) || cell.includes(separator)
+      ? `"${cell.replaceAll('"', '""')}"`
+      : cell;
+  };
   return (
-    "\uFEFF" +
-    [headers, ...rows].map((row) => row.map(escape).join(",")).join("\r\n")
+    (bom ? "\uFEFF" : "") +
+    [headers, ...rows]
+      .map((row) => row.map(escape).join(separator))
+      .join("\r\n")
   );
 }
 
 // Le bureau exporte ses colonnes personnalisées et son texte affiché. La CLI
 // conserve son journal Markdown à colonnes fixes et son fuseau configurable.
-export function markdown(title, headers, rows, links = []) {
+export function markdown(
+  title,
+  headers,
+  rows,
+  links = [],
+  { heading = true } = {},
+) {
   if (!headers.length) throw new Error("Aucune colonne à exporter");
   const escape = (value) =>
     String(value ?? "")
@@ -205,8 +276,9 @@ export function markdown(title, headers, rows, links = []) {
   };
   const line = (cells) => `| ${cells.join(" | ")} |`;
   return [
-    `# ${escape(String(title ?? "").replace(/\r\n?|\n/g, " "))}`,
-    "",
+    ...(heading
+      ? [`# ${escape(String(title ?? "").replace(/\r\n?|\n/g, " "))}`, ""]
+      : []),
     line(headers.map(escape)),
     line(headers.map(() => "---")),
     ...rows.map((row, index) =>
@@ -223,12 +295,4 @@ export function markdown(title, headers, rows, links = []) {
     ),
     "",
   ].join("\n");
-}
-export function exportTable(entries, columns) {
-  return {
-    headers: columns.map((c) => c.label),
-    rows: groupEntries(entries).flatMap((g) =>
-      g.entries.map((e) => columns.map((c) => formatCell(e, c))),
-    ),
-  };
 }

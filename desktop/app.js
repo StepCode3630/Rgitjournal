@@ -3,7 +3,8 @@ import {
   formatCell,
   csv,
   markdown,
-  exportTable,
+  exportEntries,
+  exportPeriod,
   startDateIso,
   taskPrefixes,
   taskPrefix,
@@ -21,6 +22,7 @@ let project = null,
   entries = [],
   stats = {},
   busy = false;
+const journalRows = new Map();
 const node = (tag, text, attributes = {}) => {
   const el = document.createElement(tag);
   if (text !== undefined) el.textContent = text;
@@ -45,6 +47,7 @@ async function run(fn) {
 function dialog(title, fields, submit, label = "Enregistrer") {
   $("modal").classList.remove("stats-dialog");
   $("dialog-title").textContent = title;
+  $("fields").oninput = null;
   $("fields").replaceChildren(...fields);
   $("form-error").textContent = "";
   $("submit").textContent = label;
@@ -175,6 +178,7 @@ function render() {
     : "Ouvrez ou créez un projet .gitj dans votre dépôt Git, à la racine ou dans un sous-dossier.";
   $("add").hidden = !project;
   $("journal").replaceChildren();
+  journalRows.clear();
   if (!project) return;
   const table = node("table"),
     head = node("thead"),
@@ -246,6 +250,7 @@ function render() {
       }
       row.append(actions);
       body.append(row);
+      journalRows.set(entry, row);
     }
     const row = node("tr", undefined, { class: "total day-total" });
     row.append(
@@ -493,6 +498,7 @@ const actions = {
       },
     );
   },
+  "configure-export": configureExport,
   preferences: async () => {
     const prefs = await invoke("preferences");
     dialog(
@@ -511,43 +517,9 @@ const actions = {
       },
     );
   },
-  csv: async () => {
-    if (!project) return;
-    const table = tableForExport();
-    const path = await invoke("export_file", {
-      format: "csv",
-      content: csv(table.headers, table.rows),
-      table,
-      title: project.projectName,
-    });
-    if (path) status("CSV exporté : " + path);
-  },
-  markdown: async () => {
-    if (!project) return;
-    const table = tableWithTotals();
-    const path = await invoke("export_file", {
-      format: "md",
-      content: markdown(
-        project.projectName,
-        table.headers,
-        table.rows,
-        table.links,
-      ),
-      table,
-      title: project.projectName,
-    });
-    if (path) status("Markdown exporté : " + path);
-  },
-  pdf: async () => {
-    if (!project) return;
-    const path = await invoke("export_file", {
-      format: "pdf",
-      content: "",
-      table: tableWithTotals(),
-      title: project.projectName,
-    });
-    if (path) status("PDF exporté : " + path);
-  },
+  csv: () => exportJournal("csv"),
+  markdown: () => exportJournal("md"),
+  pdf: () => exportJournal("pdf"),
   print: () => {
     if (project) window.print();
   },
@@ -656,31 +628,351 @@ const actions = {
       null,
     ),
 };
-function tableWithTotals() {
-  const table = tableForExport();
-  const rows = [...document.querySelectorAll("tbody tr")];
-  table.rows = rows.map((row) =>
-    [...row.cells]
-      .slice(0, project.columns.length)
-      .map((c) => c.innerText.trim()),
-  );
-  table.links = rows.map((row) =>
-    [...row.cells]
-      .slice(0, project.columns.length)
-      .map((cell) => cell.querySelector("a[data-url]")?.dataset.url ?? null),
-  );
-  return table;
+function exportColumns() {
+  const occurrences = new Map();
+  return project.columns.map((column, index) => {
+    const key = JSON.stringify([
+      column.source,
+      column.label,
+      column.field,
+      column.regex,
+      column.group,
+    ]);
+    const occurrence = occurrences.get(key) ?? 0;
+    occurrences.set(key, occurrence + 1);
+    return { ...column, index, key: JSON.stringify([key, occurrence]) };
+  });
 }
-function tableForExport() {
-  // Export exactly the visible cell text, including condensed descriptions.
-  const table = exportTable(entries, project.columns);
-  table.rows = [...document.querySelectorAll("tbody tr[data-date]")].map(
-    (row) =>
-      [...row.cells]
-        .slice(0, project.columns.length)
-        .map((c) => c.innerText.trim()),
+
+function selectedColumns(columns, keys) {
+  if (!Array.isArray(keys)) return columns;
+  return columns.filter((column) => keys.includes(column.key));
+}
+
+function configureExport() {
+  if (!project)
+    throw new Error("Ouvrez un projet pour configurer ses exports.");
+  const configuredProject = project;
+  const saved = project.exportOptions ?? {};
+  const columns = exportColumns();
+  const chosen = new Set(
+    selectedColumns(columns, saved.columns).map((column) => column.key),
   );
-  return table;
+  const authors = [
+    ...new Set(
+      entries
+        .flatMap((entry) => entry.author)
+        .filter((author) => typeof author === "string" && author),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+  if (saved.author && !authors.includes(saved.author))
+    authors.push(saved.author);
+
+  function choice(label, name, options, fallback) {
+    const wrapper = node("label", label);
+    const select = node("select", undefined, { name });
+    for (const [value, text] of options)
+      select.append(node("option", text, { value }));
+    select.value = saved[name] ?? fallback;
+    if (select.selectedIndex === -1) select.value = fallback;
+    wrapper.append(select);
+    return wrapper;
+  }
+  function checkbox(label, name, checked, value = "on") {
+    const wrapper = node("label", undefined, { class: "export-checkbox" });
+    const input = node("input", undefined, { type: "checkbox", name, value });
+    input.checked = checked;
+    wrapper.append(input, node("span", label));
+    return wrapper;
+  }
+  function section(title, ...fields) {
+    const group = node("fieldset", undefined, { class: "export-section" });
+    group.append(node("legend", title), ...fields);
+    return group;
+  }
+  const date = choice(
+    "Période (UTC)",
+    "period",
+    [
+      ["all", "Toutes les dates"],
+      ["range", "Dates personnalisées"],
+      ["week", "Une semaine (lundi à dimanche)"],
+      ["month", "Un mois"],
+    ],
+    "all",
+  );
+  const reference = field(
+    "Date dans la semaine ou le mois",
+    "reference",
+    saved.reference ?? new Date().toISOString().slice(0, 10),
+    "date",
+  );
+  const start = field("Du (inclus)", "start", saved.start, "date");
+  const end = field("Au (inclus)", "end", saved.end, "date");
+  const preview = node("p", "", { role: "status", class: "export-preview" });
+  function updatePreview() {
+    const period = date.querySelector("select").value;
+    reference.hidden = !["week", "month"].includes(period);
+    start.hidden = end.hidden = period !== "range";
+    const values = Object.fromEntries(new FormData($("form")));
+    try {
+      const range = exportPeriod(values);
+      const count = exportEntries(entries, values).length;
+      const dates = range.start
+        ? ` · Du ${range.start} au ${range.end} (UTC)`
+        : "";
+      preview.textContent = `${count} entrée(s) à exporter${dates}`;
+    } catch (error) {
+      preview.textContent = error.message;
+    }
+  }
+  dialog(
+    "Structure Export",
+    [
+      node(
+        "p",
+        "Ces réglages s’appliquent aux commandes de Fichier → Exporter.",
+      ),
+      section(
+        "Filtres",
+        date,
+        reference,
+        start,
+        end,
+        choice(
+          "Auteur",
+          "author",
+          [["", "Tous"], ...authors.map((author) => [author, author])],
+          "",
+        ),
+        choice(
+          "Statut",
+          "status",
+          [
+            ["", "Tous"],
+            ["done", "Done"],
+            ["wip", "WIP"],
+            ["other", "Autre / non renseigné"],
+          ],
+          "",
+        ),
+        choice(
+          "Source",
+          "source",
+          [
+            ["", "Toutes"],
+            ["commit", "Commits Git"],
+            ["manual", "Entrées manuelles"],
+            ["github", "Commentaires GitHub"],
+          ],
+          "",
+        ),
+        preview,
+      ),
+      section(
+        "Contenu",
+        ...columns.map((column) =>
+          checkbox(column.label, "columns", chosen.has(column.key), column.key),
+        ),
+        checkbox(
+          "Inclure les statistiques des entrées exportées",
+          "statistics",
+          saved.statistics === true,
+        ),
+      ),
+      section(
+        "Markdown (.md)",
+        checkbox(
+          "Afficher le titre du projet",
+          "heading",
+          saved.heading !== false,
+        ),
+        checkbox(
+          "Ajouter une colonne de liens vers les sources",
+          "sourceLinks",
+          saved.sourceLinks === true,
+        ),
+      ),
+      section(
+        "CSV (.csv)",
+        choice(
+          "Séparateur",
+          "separator",
+          [
+            [",", "Virgule"],
+            [";", "Point-virgule"],
+            ["tab", "Tabulation"],
+          ],
+          ",",
+        ),
+        checkbox("Inclure la marque UTF-8 (BOM)", "bom", saved.bom !== false),
+      ),
+      section(
+        "PDF (.pdf)",
+        choice(
+          "Orientation A4",
+          "orientation",
+          [
+            ["landscape", "Paysage"],
+            ["portrait", "Portrait"],
+          ],
+          "landscape",
+        ),
+        checkbox(
+          "Répéter les en-têtes sur chaque page",
+          "repeatHeaders",
+          saved.repeatHeaders !== false,
+        ),
+      ),
+    ],
+    async (form) => {
+      const {
+        period,
+        reference,
+        start,
+        end,
+        author,
+        status: entryStatus,
+        source,
+        separator,
+        orientation,
+      } = Object.fromEntries(form);
+      const options = {
+        period,
+        ...(period === "range" ? { start, end } : {}),
+        ...(["week", "month"].includes(period) ? { reference } : {}),
+        author,
+        status: entryStatus,
+        source,
+        separator,
+        orientation,
+      };
+      exportPeriod(options);
+      const checked = form.getAll("columns");
+      if (!checked.length) throw new Error("Choisissez au moins une colonne.");
+      if (checked.length !== columns.length) options.columns = checked;
+      for (const name of [
+        "statistics",
+        "heading",
+        "sourceLinks",
+        "bom",
+        "repeatHeaders",
+      ])
+        options[name] = form.has(name);
+      if (project !== configuredProject)
+        throw new Error("Le projet ouvert a changé.");
+      project = await invoke("configure_project", {
+        project: { ...project, exportOptions: options },
+      });
+      status("Structure d’export enregistrée.");
+    },
+  );
+  $("fields").oninput = updatePreview;
+  updatePreview();
+}
+
+function exportReport(format, options, included) {
+  const columns = selectedColumns(exportColumns(), options.columns);
+  if (!columns.length)
+    throw new Error(
+      "Choisissez des colonnes dans Configuration → Structure Export.",
+    );
+  const sourceLinks = format === "md" && options.sourceLinks === true;
+  const headers = columns.map((column) => column.label);
+  if (sourceLinks) headers.push("Lien source");
+  const rows = [];
+  const links = [];
+  function addRow(values, urls = []) {
+    rows.push(values);
+    links.push(urls);
+  }
+  for (const group of groupEntries(included)) {
+    for (const entry of group.entries) {
+      const rendered = journalRows.get(entry);
+      const cells = columns.map(({ index }) => rendered.cells[index]);
+      const values = cells.map((cell) => cell.innerText.trim());
+      const urls = cells.map(
+        (cell) => cell.querySelector("a[data-url]")?.dataset.url,
+      );
+      if (sourceLinks) {
+        values.push(entry.url ? "Voir la source" : "");
+        urls.push(entry.url);
+      }
+      addRow(values, urls);
+    }
+    if (format !== "csv") {
+      const day = new Date(group.day).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+      addRow([
+        `${day} — ${Math.floor(group.minutes / 60)}h ${group.minutes % 60}m`,
+      ]);
+    }
+  }
+  const summary = journalSummary(included);
+  if (format !== "csv") {
+    const scope =
+      included.length === entries.length ? "du projet" : "de la sélection";
+    const minutes = summary.totalMinutes;
+    addRow([`Total ${scope} : ${Math.floor(minutes / 60)}h ${minutes % 60}m`]);
+  }
+  if (options.statistics) {
+    addRow(["Statistiques"]);
+    for (const [name, value] of [
+      ["Entrées", summary.entryCount],
+      ["Jours avec entrées", summary.activeDays],
+      ["Durée totale (min)", summary.totalMinutes],
+      ...summary.statuses.map(({ label, count }) => [label, count]),
+    ]) {
+      addRow(
+        format === "csv" && headers.length > 1
+          ? [name, String(value)]
+          : [`${name} : ${value}`],
+      );
+    }
+  }
+  return {
+    headers,
+    rows,
+    links,
+    orientation: options.orientation,
+    repeatHeaders: options.repeatHeaders,
+  };
+}
+
+async function exportJournal(format) {
+  if (!project) return;
+  const options = project.exportOptions ?? {};
+  const included = exportEntries(entries, options);
+  if (entries.length && !included.length)
+    throw new Error(
+      "Aucune entrée ne correspond. Vérifiez Configuration → Structure Export.",
+    );
+  const table = exportReport(format, options, included);
+  const title = project.projectName;
+  let content = "";
+  if (format === "csv") {
+    const separator =
+      { ",": ",", ";": ";", tab: "\t" }[options.separator] ?? ",";
+    content = csv(
+      table.headers,
+      table.rows.map((row) => table.headers.map((_, index) => row[index])),
+      { separator, bom: options.bom !== false },
+    );
+  } else if (format === "md") {
+    content = markdown(title, table.headers, table.rows, table.links, {
+      heading: options.heading !== false,
+    });
+  }
+  const path = await invoke("export_file", { format, content, table, title });
+  if (path)
+    status(
+      `${format === "md" ? "Markdown" : format.toUpperCase()} exporté : ${path}`,
+    );
 }
 $("cancel").onclick = () => $("modal").close();
 $("add").onclick = () => edit();

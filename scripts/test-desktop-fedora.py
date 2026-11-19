@@ -150,6 +150,20 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
     for j in range(candidate.get_child_count()):
      window=candidate.get_child_at_index(j)
      if title in window.get_name():return window
+  menu('Configuration','Structure Export')
+  select_field('Source',1)
+  select_field('Séparateur',1)
+  select_field('Orientation A4',1)
+  for label in ['Date','Inclure les statistiques des entrées exportées','Afficher le titre du projet',
+                'Ajouter une colonne de liens vers les sources','Inclure la marque UTF-8 (BOM)']:
+   target=wait_for(lambda:find('check box',label))
+   assert target.get_action_iface().do_action(0),label
+  click('Enregistrer')
+  wait_for(lambda:json.loads(project.read_text()).get('exportOptions',{}).get('source')=='commit')
+  options=json.loads(project.read_text())['exportOptions']
+  assert options['statistics'] and options['sourceLinks'] and not options['heading'] and not options['bom']
+  assert options['separator']==';' and options['orientation']=='portrait'
+  print('Structure Export enregistrée dans le projet.')
   for label,extension in [('CSV','csv'),('PDF','pdf'),('Markdown','md')]:
    menu('Fichier','Exporter','En '+label)
    native=wait_for(lambda:native_dialog('Exporter le journal en '+label))
@@ -158,17 +172,24 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    output=repo/('journal.'+extension)
    wait_for(lambda:output.exists() and output.stat().st_size>0)
    if extension=='csv':
-    data=output.read_bytes();assert data.startswith(b'\xef\xbb\xbf');assert b'45' in data;assert b'\r\n' in data
+    data=output.read_bytes()
+    assert data.startswith('Tâche;Description;Durée;Statut'.encode())
+    assert 'Statistiques'.encode() in data and b'Done' in data and b'WIP' in data
+    assert b'manual' not in data.lower() and b'\r\n' in data
    elif extension=='pdf':
     assert output.read_bytes().startswith(b'%PDF-')
+    info=subprocess.check_output(['pdfinfo',str(output)],text=True)
+    size=next(line.split() for line in info.splitlines() if line.startswith('Page size:'))
+    assert float(size[2]) < float(size[4]),info
     text=subprocess.check_output(['pdftotext','-enc','UTF-8',str(output),'-'],text=True,encoding='utf-8')
-    assert 'Tâche vérifiée' in text and 'Total du projet' in text
+    assert 'Tâche vérifiée' in text and 'Total de la sélection' in text and 'Statistiques' in text
+    assert 'manual' not in text.lower()
    else:
     text=output.read_text(encoding='utf-8')
-    assert text.startswith('# Essai Fedora\n')
-    assert '| Date | Tâche | Description | Durée | Statut |' in text
-    assert 'Tâche vérifiée' in text and 'Total du projet' in text
-    assert '**Total du projet' in text and 'WIP' in text
+    assert text.startswith('| Tâche | Description | Durée | Statut | Lien source |')
+    assert 'Tâche vérifiée' in text and 'Total de la sélection' in text and 'Statistiques' in text
+    assert '[Voir la source](https://github.com/example/gui-fixture/commit/' in text
+    assert 'manual' not in text.lower()
    print(label+' créé depuis la fenêtre Tauri et contenu vérifié.')
    time.sleep(.3)
   menu('Fichier','Imprimer')

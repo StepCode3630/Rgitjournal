@@ -136,8 +136,7 @@ impl Fonts {
     }
 }
 
-/// PDF indépendant d'un navigateur ou processus Node, A4 paysage, avec
-/// répétition des en-têtes et pagination même pour une cellule très longue.
+/// PDF A4 paginé, avec orientation et répétition des en-têtes configurables.
 pub fn pdf(title: &str, table: &Value) -> Result<Vec<u8>> {
     let headers: Vec<String> = table["headers"]
         .as_array()
@@ -170,19 +169,27 @@ pub fn pdf(title: &str, table: &Value) -> Result<Vec<u8>> {
         .collect::<Vec<_>>()
         .join("\n");
     let fonts = Fonts::load(&mut doc, &text)?;
-    let width = 785. / headers.len() as f32;
+    let (page_width, page_height) = if table["orientation"] == "portrait" {
+        (210., 297.)
+    } else {
+        (297., 210.)
+    };
+    let body_width = page_width * 72. / 25.4 - 56.;
+    let top = page_height * 72. / 25.4 - 27.;
+    let repeat_headers = table["repeatHeaders"] != false;
+    let width = body_width / headers.len() as f32;
     let mut pages = Vec::new();
     let mut ops = Vec::new();
-    let title_lines = fonts.wrap(title, 785., 13.);
+    let title_lines = fonts.wrap(title, body_width, 13.);
     let title_height = title_lines.len() as f32 * 16.;
     if title_height > 200. {
         return Err("Titre trop long pour l’en-tête PDF".into());
     }
-    let header_top = 568. - title_height - 4.;
+    let header_top = top - title_height - 4.;
     let mut y = header_top;
     let heading = |ops: &mut Vec<Op>| {
         for (i, line) in title_lines.iter().enumerate() {
-            fonts.draw(ops, line, 28., 568. - i as f32 * 16., 13.);
+            fonts.draw(ops, line, 28., top - i as f32 * 16., 13.);
         }
         for (i, h) in headers.iter().enumerate() {
             for (j, line) in fonts.wrap(h, width - 8., 8.).iter().enumerate() {
@@ -208,14 +215,32 @@ pub fn pdf(title: &str, table: &Value) -> Result<Vec<u8>> {
         let spanning = row.len() == 1;
         let cells: Vec<_> = row
             .iter()
-            .map(|s| fonts.wrap(s, if spanning { 777. } else { width - 8. }, 8.))
+            .map(|s| {
+                fonts.wrap(
+                    s,
+                    if spanning {
+                        body_width - 8.
+                    } else {
+                        width - 8.
+                    },
+                    8.,
+                )
+            })
             .collect();
         let height = cells.iter().map(Vec::len).max().unwrap_or(1);
         for line in 0..height {
             if y < 35. {
-                pages.push(PdfPage::new(Mm(297.), Mm(210.), std::mem::take(&mut ops)));
-                heading(&mut ops);
-                y = header_top - header_height - 12.;
+                pages.push(PdfPage::new(
+                    Mm(page_width),
+                    Mm(page_height),
+                    std::mem::take(&mut ops),
+                ));
+                y = if repeat_headers {
+                    heading(&mut ops);
+                    header_top - header_height - 12.
+                } else {
+                    top
+                };
             }
             for (i, cell) in cells.iter().enumerate() {
                 if let Some(s) = cell.get(line) {
@@ -246,7 +271,7 @@ pub fn pdf(title: &str, table: &Value) -> Result<Vec<u8>> {
         }
         y -= 7.;
     }
-    pages.push(PdfPage::new(Mm(297.), Mm(210.), ops));
+    pages.push(PdfPage::new(Mm(page_width), Mm(page_height), ops));
     Ok(doc
         .with_pages(pages)
         .save(&PdfSaveOptions::default(), &mut Vec::new()))

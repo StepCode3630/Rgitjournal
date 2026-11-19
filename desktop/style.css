@@ -537,3 +537,34 @@ footer {
     font-size: 16pt;
   }
 }
+
+.export-section {
+  min-inline-size: 0;
+  margin: 1rem 0;
+  padding: 0.35rem 0.85rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.export-section label[hidden] {
+  display: none;
+}
+
+.export-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow-wrap: anywhere;
+}
+
+.export-checkbox input {
+  width: 1rem;
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.export-preview {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

@@ -419,7 +419,11 @@ fn main() {
                 app,
                 "Configuration",
                 true,
-                &[&token, &item("configure", "Structure JSON", None)?],
+                &[
+                    &token,
+                    &item("configure", "Structure JSON", None)?,
+                    &item("configure-export", "Structure Export", None)?,
+                ],
             )?;
             #[cfg(target_os = "macos")]
             {

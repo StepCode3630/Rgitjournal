@@ -346,15 +346,31 @@ disponibles sous **Détail de la collecte**.
 | Exporter en Markdown (`.md`) | Menu **Fichier → Exporter → En Markdown** |
 | Imprimer | `Cmd+P` / `Ctrl+P` |
 
-Le CSV reprend les colonnes et le texte affichés, en UTF-8 avec BOM et fins de ligne CRLF.
-Le PDF est généré en Rust au format A4 paysage, avec pagination et en-têtes répétés.
-Le Markdown est écrit en UTF-8 : titre du projet, colonnes et texte affichés,
-totaux journaliers et total du projet. Les retours à la ligne des cellules utilisent
-`<br>` ; les caractères Markdown et HTML des données sont échappés. Les renvois
-HTTP(S) des descriptions sont conservés. L’écriture utilise le même dialogue de
-sauvegarde et le même remplacement atomique que les autres exports.
-Cet export du bureau conserve les colonnes personnalisées ; le journal Markdown
-à colonnes fixes de la CLI et de la GitHub Action reste inchangé.
+Dans **Configuration → Structure Export**, choisir les entrées à inclure
+avant d’utiliser **Fichier → Exporter**. Les réglages sont enregistrés dans
+`exportOptions` dans le fichier `.gitj` du projet.
+
+- **Période** — toutes les dates, un intervalle inclusif, une semaine du lundi
+  au dimanche ou un mois civil. Pour une semaine ou un mois, choisir une date
+  qui en fait partie. Le filtrage suit le regroupement UTC du journal.
+- **Filtres et colonnes** — combiner auteur, statut et source, puis choisir les
+  colonnes à conserver. Le formulaire affiche le nombre d’entrées correspondant
+  aux filtres.
+- **Statistiques** — ajouter le nombre d’entrées, le nombre de jours actifs, la
+  durée totale en minutes et les comptes par statut. Ces valeurs portent sur la
+  sélection exportée. En CSV, elles sont ajoutées à la fin du fichier sous forme
+  de lignes avec le même nombre de colonnes que le tableau.
+- **Markdown** — afficher ou masquer le titre du projet et ajouter une colonne
+  avec les liens vers les commits ou commentaires dont l’adresse est disponible.
+- **CSV** — choisir la virgule, le point-virgule ou la tabulation et activer ou
+  désactiver la marque UTF-8 (BOM).
+- **PDF** — choisir l’orientation A4 et la répétition des en-têtes sur les pages
+  suivantes.
+
+Sans réglage, le bureau exporte toutes les entrées et colonnes de son journal.
+Le CSV utilise une virgule, un BOM et des fins de ligne CRLF. Le PDF utilise
+l’A4 paysage, avec en-têtes répétés. Le PDF et le Markdown incluent les totaux.
+Le journal Markdown de la CLI et de la GitHub Action suit ses propres réglages.
 L’impression passe par le dialogue système ; aucune impression n’est lancée sans confirmation.
 
 ### Sauvegarder
