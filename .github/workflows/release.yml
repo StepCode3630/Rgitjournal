@@ -1,0 +1,119 @@
+name: Publish desktop installers
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-version:
+    if: ${{ !github.event.deleted }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Check release tag and project versions
+        run: python3 scripts/check-release-version.py "$GITHUB_REF_NAME"
+
+  build:
+    needs: verify-version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            platform: windows-x64
+            command: build:win
+            packages: |
+              src-tauri/target/release/bundle/nsis/*.exe
+              src-tauri/target/release/bundle/msi/*.msi
+          - runner: ubuntu-24.04
+            platform: linux-x64
+            command: build:linux
+            packages: |
+              src-tauri/target/release/bundle/deb/*.deb
+              src-tauri/target/release/bundle/rpm/*.rpm
+          - runner: macos-26
+            platform: macos-arm64
+            command: build:mac
+            packages: src-tauri/target/release/bundle/dmg/*.dmg
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.15.0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux build prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev poppler-utils
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test and build native packages
+        env:
+          BUILD_COMMAND: ${{ matrix.command }}
+          APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && '-' || '' }}
+        shell: bash
+        run: pnpm run "$BUILD_COMMAND"
+      - name: Verify the Apple Silicon bundle
+        if: runner.os == 'macOS'
+        run: |
+          app=src-tauri/target/release/bundle/macos/GitJournal.app
+          executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
+          lipo -verify_arch arm64 "$app/Contents/MacOS/$executable"
+          codesign --verify --deep --strict "$app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: ${{ matrix.packages }}
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          merge-multiple: true
+          path: installers
+      - name: Publish the complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob globstar
+          assets=()
+          for extension in exe msi deb rpm dmg; do
+            files=(installers/**/*."$extension")
+            if (( ${#files[@]} != 1 )) || [[ ! -s "${files[0]}" ]]; then
+              echo "::error::Expected exactly one non-empty .$extension installer"
+              exit 1
+            fi
+            assets+=("${files[0]}")
+          done
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            --verify-tag \
+            --title "GitJournal $GITHUB_REF_NAME" --notes-from-tag

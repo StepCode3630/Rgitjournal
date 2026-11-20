@@ -86,8 +86,10 @@ Le format DEB/RPM ne garantit pas la compatibilité binaire entre distributions 
 sur une base compatible avec la cible, puis tester l’installation. Le DEB produit sous Fedora
 n’a pas été exécuté sur Debian.
 Les paquets sont dans `src-tauri/target/release/bundle/`, et le binaire dans
-`src-tauri/target/release/`. La signature Windows/macOS nécessite la configuration du
-mainteneur et n’est pas réalisée ici. Aucun script ne publie de paquet ou de release.
+`src-tauri/target/release/`. Ces commandes servent à construire les paquets localement.
+La publication sur GitHub Releases passe par le workflow déclenché par un tag
+stable. Le build macOS de publication utilise une signature ad hoc. Voir
+[Préparer et publier une version](../README.md#préparer-et-publier-une-version).
 L’AppImage reste accessible avec `pnpm exec tauri build --bundles appimage` après préparation
 des ressources, mais ce format n’a pas été validé localement.
 

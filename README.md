@@ -1,105 +1,139 @@
-# GitJournal
+# <img src="src/assets/icon.png" alt="" width="48" /> GitJournal
 
-Application de bureau Tauri/Rust pour générer un journal de travail à partir des commits Git locaux et des commentaires d'issues GitHub.
+Application de bureau pour tenir un journal de travail à partir des commits
+d’un dépôt Git local, d’entrées manuelles et de commentaires GitHub facultatifs.
+Le bureau exporte en PDF, Markdown et CSV. La CLI et l’action GitHub peuvent
+générer un journal Markdown automatiquement.
 
-Le même moteur est disponible en ligne de commande et comme GitHub Action, pour tenir un `journal.md` à jour automatiquement (voir [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)).
+## Table des matières
+
+- [Installer l’application](#installer-lapplication)
+- [Désinstaller](#désinstaller)
+- [Compiler depuis les sources](#compiler-depuis-les-sources)
+- [Utilisation](#utilisation)
+  - [Créer un nouveau projet](#créer-un-nouveau-projet)
+  - [Ouvrir un projet existant](#ouvrir-un-projet-existant)
+  - [Format des messages de commit](#format-des-messages-de-commit)
+  - [Exporter](#exporter)
+- [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)
+- [Raccourcis clavier](#raccourcis-clavier)
+- [Versionner vos projets](#versionner-vos-projets)
+- [Tests](#tests)
+- [Préparer et publier une version](#préparer-et-publier-une-version)
+- [Contribuer](#contribuer)
+- [Structure du projet](#structure-du-projet)
+- [Dépannage](#dépannage)
+- [Préférences et compatibilité](#préférences-et-compatibilité)
 
 ## Installer l’application
 
-L’application installée ne nécessite ni Node.js, ni pnpm, ni Rust, ni Electron.
-**Git doit être installé et accessible à l’application** pour lire les commits locaux.
-Choisir un paquet correspondant au système et à l’architecture de la machine
-(`x64`/`amd64`/`x86_64` pour Intel/AMD 64 bits, `arm64`/`aarch64` pour ARM).
+Ouvrir [GitHub Releases](https://github.com/StepCode3630/Rgitjournal/releases)
+et choisir la version souhaitée. Dans **Assets**, télécharger le paquet adapté
+à votre système.
 
-Les installateurs sont produits par les commandes de compilation décrites plus bas,
-dans `src-tauri/target/release/bundle/`. Ce dépôt ne publie pas automatiquement de
-paquets : si vous n’avez pas reçu d’installateur, suivre **Compiler depuis les sources**.
-La CI actuelle vérifie la compilation et les tests, sans fournir d’installateurs.
-
-| Système | Format | Sous-dossier de sortie |
+| Système | Architecture | Fichier à télécharger |
 |---|---|---|
-| Windows 10/11 | Installateur NSIS `.exe` ou Windows Installer `.msi` | `nsis/` ou `msi/` |
-| macOS | Image `.dmg` ou application `.app` | `dmg/` ou `macos/` |
-| Fedora et dérivées compatibles | Paquet `.rpm` | `rpm/` |
-| Debian/Ubuntu et dérivées compatibles | Paquet `.deb` | `deb/` |
+| Windows 10 ou 11 | x64 (Intel/AMD) | `.exe` (NSIS) ou `.msi` (Windows Installer) |
+| macOS | Apple Silicon (arm64) | `.dmg` |
+| Fedora | x64 (x86_64) | `.rpm` |
+| Ubuntu ou Debian compatible avec la base de compilation | x64 (amd64) | `.deb` |
+
+Les liens **Source code (zip)** et **Source code (tar.gz)** contiennent le code
+du tag pour compiler l’application. GitHub les ajoute à chaque release.
+La compilation Linux de publication utilise Ubuntu 24.04. La distribution
+cible doit fournir WebKitGTK 4.1, GTK 3 et une version compatible de glibc.
+[Archives de GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+· [Compatibilité des paquets Linux Tauri](https://v2.tauri.app/distribute/rpm/#limitations)
+
+Git doit être installé et accessible à l’application pour lire les commits.
+L’installation des paquets de bureau fonctionne sans Node.js, pnpm ni Rust.
 
 ### Windows 10 et Windows 11
 
-1. Installer [Git pour Windows](https://git-scm.com/downloads/win), avec Git accessible
-   depuis les applications, puis vérifier `git --version` dans un nouveau terminal.
-2. Exécuter l’installateur GitJournal `.exe` ou `.msi` et suivre l’assistant.
-3. Si nécessaire, installer le [runtime Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/).
-   L’installateur Tauri peut le télécharger s’il manque ; une connexion Internet est alors nécessaire.
-4. Ouvrir **GitJournal** depuis le menu Démarrer.
+1. Installer [Git pour Windows](https://git-scm.com/downloads/win), puis vérifier
+   que `git --version` fonctionne dans un nouveau terminal.
+2. Ouvrir le `.exe` ou le `.msi` téléchargé et suivre l’assistant. L’installateur
+   peut télécharger WebView2 si le runtime est absent. Le runtime est aussi
+   disponible auprès de Microsoft. [Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/)
+3. Si SmartScreen affiche **Windows a protégé votre ordinateur**, vérifier que
+   le fichier provient de la page Releases du projet. Si vous faites confiance
+   au fichier, choisir **Informations complémentaires → Exécuter quand même**
+   lorsque le bouton est disponible. Smart App Control ou une politique
+   d’entreprise peut bloquer un installateur non signé.
+   [SmartScreen](https://learn.microsoft.com/en-us/troubleshoot/microsoft-edge/development/ie-mode-blocks-addon)
+   · [Smart App Control](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/overview)
+4. Lancer **GitJournal** depuis le menu Démarrer.
 
-### macOS
+### macOS sur Apple Silicon
 
-1. Vérifier `git --version` dans Terminal. Si Git manque, installer les outils Apple
-   avec `xcode-select --install`, puis terminer leur installation.
-2. Ouvrir le `.dmg`, puis glisser **GitJournal.app** dans **Applications**.
-   Si vous disposez directement du `.app`, le copier dans **Applications**.
-3. Lancer GitJournal depuis **Applications**.
+1. Vérifier `git --version` dans Terminal. Si Git manque, installer les outils
+   de ligne de commande Apple avec `xcode-select --install`.
+2. Ouvrir le `.dmg`, glisser **GitJournal.app** dans **Applications**, puis
+   essayer d’ouvrir l’application depuis ce dossier.
+3. Si macOS indique qu’il ne peut pas vérifier le développeur, vérifier la
+   provenance du fichier. Ouvrir **Réglages Système → Confidentialité et
+   sécurité**, descendre à la section **Sécurité**, choisir **Ouvrir quand même**
+   et confirmer l’ouverture. Ce bouton apparaît après la première tentative
+   de lancement et reste disponible un temps limité. [Procédure Apple](https://support.apple.com/fr-fr/102445)
 
-Utiliser un paquet construit pour votre Mac : Apple Silicon ou Intel.
-La signature et la notarisation macOS ne sont pas configurées dans le projet ;
-un paquet local non signé peut être bloqué par macOS.
+Le paquet Apple Silicon porte une signature ad hoc et reste sans certificat
+Developer ID ni notarisation. L’autorisation ci-dessus s’applique à
+GitJournal. [Signature ad hoc dans Tauri](https://v2.tauri.app/distribute/sign/macos/#ad-hoc-signing)
 
 ### Fedora
 
-Depuis le dossier contenant le RPM, remplacer `GitJournal-VERSION-ARCH.rpm`
-par son nom exact :
+Depuis le dossier de téléchargement, remplacer le nom d’exemple par celui
+du RPM téléchargé.
 
 ```bash
-sudo dnf install ./GitJournal-VERSION-ARCH.rpm
+sudo dnf install ./GitJournal-VERSION-1.x86_64.rpm
 ```
 
-DNF installe aussi les dépendances déclarées, dont Git, GTK et WebKitGTK.
-Lancer ensuite **GitJournal** depuis le menu des applications, ou avec
-`gitjournal-desktop` dans un terminal.
+Lancer **GitJournal** depuis le menu des applications ou avec
+`gitjournal-desktop`.
 
-### Debian et Ubuntu
+### Ubuntu et Debian
 
-Depuis le dossier contenant le DEB, remplacer `GitJournal_VERSION_ARCH.deb`
-par son nom exact :
+Depuis le dossier de téléchargement, remplacer le nom d’exemple par celui
+du DEB téléchargé.
 
 ```bash
 sudo apt update
-sudo apt install ./GitJournal_VERSION_ARCH.deb
+sudo apt install ./GitJournal_VERSION_amd64.deb
 ```
 
-APT installe les dépendances déclarées, dont Git, GTK et WebKitGTK 4.1.
-Lancer ensuite **GitJournal** depuis le menu des applications, ou avec
-`gitjournal-desktop` dans un terminal.
+Lancer **GitJournal** depuis le menu des applications ou avec
+`gitjournal-desktop`. Si la distribution cible ne satisfait pas les
+dépendances du DEB, utiliser une base compatible ou compiler sur la cible.
 
-Le paquet doit être construit sur une base compatible avec la distribution cible.
-Un DEB construit sous Fedora ne constitue pas une validation de compatibilité Debian.
-Les autres distributions Linux nécessitent un paquet et des bibliothèques adaptés ;
-aucune installation universelle Linux n’est fournie.
+### Mettre à jour
 
-### Ouvrir votre journal après installation
+Télécharger le nouveau paquet de la même plateforme depuis Releases et
+relancer l’installation. Sur macOS, remplacer l’ancienne application dans
+**Applications** quand le Finder le propose. Les fichiers `.gitj` restent
+dans les dépôts où ils ont été enregistrés.
 
-Dans GitJournal, choisir **Fichier > Ouvrir un projet** (`Ctrl+O`, ou `Cmd+O` sur macOS),
-puis sélectionner le `.gitj` situé dans le dépôt local, y compris dans un sous-dossier
-comme `doc/Journal/p_fun.gitj`. Aucun accès GitHub n’est nécessaire pour lire les commits.
+## Désinstaller
 
-### État des validations
+| Système | Étape |
+|---|---|
+| Windows | Ouvrir **Paramètres → Applications**, sélectionner **GitJournal**, puis **Désinstaller**. |
+| macOS | Quitter GitJournal, puis placer **GitJournal.app** de **Applications** dans la Corbeille. |
+| Fedora | Exécuter `sudo dnf remove git-journal`. |
+| Ubuntu ou Debian | Exécuter `sudo apt remove git-journal`. |
 
-L’application a été exécutée sous **Fedora 44 x86_64**. Les paquets RPM et DEB ont été
-construits et inspectés, mais leur installation n’a pas été testée. Les installations
-Windows, macOS et Debian/Ubuntu restent à valider ; les instructions correspondantes
-s’appuient sur les formats configurés et la documentation Tauri.
-Références : [installateurs Windows](https://v2.tauri.app/distribute/windows-installer/),
-[DMG macOS](https://v2.tauri.app/distribute/dmg/) et
-[paquets Debian](https://v2.tauri.app/distribute/debian/).
+Les fichiers `.gitj` restent dans vos dépôts. Les préférences locales sont
+décrites dans [Préférences et compatibilité](#préférences-et-compatibilité).
 
 ## Compiler depuis les sources
 
 La compilation se fait sur le système cible : Windows pour Windows, macOS pour macOS,
 Linux pour Linux. Les scripts du projet ne configurent pas de compilation croisée.
+Télécharger une archive source depuis Releases ou cloner le dépôt.
 
 ### 1. Installer les outils de développement
 
-Installer [Node.js 24](https://nodejs.org/), [pnpm](https://pnpm.io/installation),
+Installer [Node.js 24](https://nodejs.org/), [pnpm 12](https://pnpm.io/installation),
 [Rust stable avec Cargo](https://www.rust-lang.org/tools/install) et Git.
 Vérifier qu’ils sont accessibles avec `node --version`, `pnpm --version`,
 `cargo --version` et `git --version`.
@@ -132,12 +166,12 @@ et [src/BUILD.md](src/BUILD.md) pour les détails.
 Depuis la racine de votre copie des sources :
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm start
 ```
 
-`pnpm start` lance l’application en développement ; cette commande ne l’installe pas
-dans le système.
+`pnpm start` prépare les ressources et lance l’application depuis les sources.
+`pnpm dev` lance le mode développement du CLI Tauri.
 
 ### 3. Construire et installer un paquet
 
@@ -245,7 +279,17 @@ acceptées et conservées ; elles sont interprétées dans le fuseau de la machi
 
 ### Format des messages de commit
 
-L'application extrait les métadonnées entre crochets **n'importe où** dans le message :
+Après avoir indexé vos modifications, créer un commit avec un titre, une
+durée positive, un statut et une description.
+
+```bash
+git commit -m "feat(utilisateurs): exemple" -m "[45][DONE]" -m "Description"
+```
+
+`[45][DONE]` signifie 45 minutes et une tâche terminée. Utiliser `[WIP]`
+pour une tâche en cours. Le bouton **?** de l’application montre le même
+principe dans un client Git graphique. GitJournal reconnaît les métadonnées
+entre crochets dans le titre ou le corps du message.
 
 ```
 feat: add login [30m done]
@@ -448,25 +492,61 @@ git commit -m "Mise à jour du journal"
 git push
 ```
 
-## Développement et build
-
-Voir [src/BUILD.md](src/BUILD.md) pour les instructions détaillées.
+## Tests
 
 ```bash
-pnpm dev          # mode développement Tauri
-pnpm test         # lancer les tests
-pnpm build        # build pour la plateforme courante
-pnpm build:mac    # .app / .dmg, depuis macOS
-pnpm build:win    # NSIS / MSI, depuis Windows
-pnpm build:linux  # .deb / .rpm, depuis Linux
+pnpm test           # CLI et modèle de l’interface
+pnpm test:rust      # moteur, persistance et PDF
+pnpm test:parity    # comparaison des moteurs JavaScript et Rust
 ```
 
-Les artefacts sont générés dans `src-tauri/target/release/bundle/`.
+Voir le [guide de construction et de vérification](src/BUILD.md) pour Clippy,
+l’essai graphique Fedora et la régénération des icônes.
 
-Après une modification de `src-tauri/icons/RGitJIcon.svg`, lancer
-`pnpm icons:generate`, puis reconstruire l’application pour inclure les nouvelles
-icônes. Le fichier Windows fourni est `src/assets/icon.ico` ; les PNG Linux et
-l’icône macOS sont générés depuis le SVG. Voir [src/BUILD.md](src/BUILD.md).
+## Préparer et publier une version
+
+1. Choisir `X.Y.Z` et mettre à jour la version dans `package.json`,
+   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et le pied de page de
+   `desktop/index.html`. Le moteur `gitjournal-core` a sa propre version.
+2. Préparer les ressources et laisser Cargo mettre à jour l’entrée
+   `gitjournal-desktop` de `src-tauri/Cargo.lock`.
+
+   ```bash
+   pnpm desktop:prepare
+   cargo check --manifest-path src-tauri/Cargo.toml
+   python3 scripts/check-release-version.py v4.1.2
+   ```
+
+   Remplacer `v4.1.2` par le tag prévu. Le vérificateur utilise Python 3.11 ou
+   plus récent et indique les fichiers à corriger si les versions divergent.
+3. Exécuter les tests, versionner les changements et s’assurer que le commit de
+   publication contient le workflow. Créer ensuite un tag annoté sur ce
+   commit et pousser ce tag.
+
+   ```bash
+   git tag -a v4.1.2 -m "Résumé des changements de GitJournal 4.1.2"
+   git push origin v4.1.2
+   ```
+
+Les tags stables au format `vX.Y.Z` déclenchent les tests et les compilations
+Windows x64, Linux x64 et macOS Apple Silicon si les versions concordent.
+Le workflow réunit les cinq installateurs avant de publier la release.
+Le message du tag annoté sert de notes de version. GitHub ajoute les deux
+archives des sources. [Workflow de publication](.github/workflows/release.yml)
+
+En cas d’échec, consulter le job concerné dans **Actions**. Relancer le workflow
+si l’échec est temporaire. Si le commit doit être corrigé, préparer une nouvelle
+version et un nouveau tag. Une erreur lors du téléversement peut laisser une
+release en brouillon à vérifier dans **Releases**.
+
+## Contribuer
+
+1. Ouvrir une [issue](https://github.com/StepCode3630/Rgitjournal/issues) avec
+   la version utilisée, votre système et les étapes de reproduction pour un bug.
+2. Créer un fork, cloner votre copie et travailler sur une branche dédiée.
+   Les commandes de développement sont dans [Compiler depuis les sources](#compiler-depuis-les-sources).
+3. Exécuter les tests pertinents, puis proposer une pull request avec le
+   changement, les résultats des tests et les plateformes vérifiées.
 
 ## Structure du projet
 
@@ -519,10 +599,6 @@ Les paquets installent les tailles d’icône usuelles et le lanceur corresponda
 ### Pas de liens GitHub dans le tableau
 
 - Vérifier que le dépôt a un remote `origin` pointant vers GitHub (`git remote -v`)
-
-## Support
-
-Pour rapporter un bug ou demander une fonctionnalité, créer une issue sur GitHub.
 
 ## Préférences et compatibilité
 
