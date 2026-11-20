@@ -980,6 +980,8 @@ async function exportJournal(format) {
 }
 $("cancel").onclick = () => $("modal").close();
 $("add").onclick = () => edit();
+$("journal-stats").onclick = () => run(actions.stats);
+$("journal-help").onclick = () => run(actions.help);
 let zoom = 1;
 document.addEventListener("keydown", (event) => {
   if (!(event.ctrlKey || event.metaKey)) return;

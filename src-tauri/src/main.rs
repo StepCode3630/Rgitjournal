@@ -377,8 +377,6 @@ fn main() {
                     &PredefinedMenuItem::select_all(app, None)?,
                 ],
             )?;
-            let stats = item("stats", "Statistiques", None)?;
-            let help = item("help", "Aide", None)?;
             let theme = Submenu::with_items(
                 app,
                 "Thème",
@@ -438,25 +436,15 @@ fn main() {
                         &PredefinedMenuItem::quit(app, Some("Quitter"))?,
                     ],
                 )?;
-                let stats = Submenu::with_items(app, "Statistiques", true, &[&stats])?;
-                let help = Submenu::with_items(app, "Aide", true, &[&help])?;
                 app.set_menu(Menu::with_items(
                     app,
-                    &[
-                        &application,
-                        &file_menu,
-                        &edit,
-                        &view,
-                        &configuration,
-                        &stats,
-                        &help,
-                    ],
+                    &[&application, &file_menu, &edit, &view, &configuration],
                 )?)?;
             }
             #[cfg(not(target_os = "macos"))]
             app.set_menu(Menu::with_items(
                 app,
-                &[&file_menu, &edit, &view, &configuration, &stats, &help],
+                &[&file_menu, &edit, &view, &configuration],
             )?)?;
             Ok(())
         })

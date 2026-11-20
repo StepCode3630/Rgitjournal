@@ -104,6 +104,33 @@ h1 {
   font-size: 1.6rem;
 }
 
+.journal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-block-end: 0.75rem;
+}
+
+.journal-actions button {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  font: 700 1.2rem/1 system-ui, sans-serif;
+}
+
+.journal-icon-chart {
+  width: 1.125rem;
+  height: 1.125rem;
+  background: currentColor;
+  clip-path: polygon(
+    0 88%, 12% 88%, 12% 56%, 28% 56%, 28% 88%, 42% 88%,
+    42% 36%, 58% 36%, 58% 88%, 72% 88%, 72% 12%, 88% 12%,
+    88% 88%, 100% 88%, 100% 100%, 0 100%
+  );
+}
+
 table {
   width: 100%;
   border-collapse: separate;
@@ -482,6 +509,7 @@ footer {
 @media print {
   #status,
   #add,
+  .journal-actions,
   dialog,
   .row-actions {
     display: none !important;

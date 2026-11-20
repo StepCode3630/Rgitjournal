@@ -156,8 +156,9 @@ d’installation de votre système ci-dessus. Reconstruire le paquet après une 
 
 ## Utilisation
 
-La barre de menus native regroupe **Fichier**, **Édition**, **Affichage**,
-**Configuration**, **Statistiques** et **Aide**. Pour exporter un rapport,
+La barre de menus native regroupe **Fichier**, **Édition**, **Affichage**
+et **Configuration**. Au-dessus du journal, à droite, le graphique ouvre
+**Statistiques** et le bouton **?** ouvre **Aide**. Pour exporter un rapport,
 ouvrir **Fichier → Exporter** et choisir **En PDF**, **En Markdown** ou **En CSV**.
 
 Dans **Affichage → Thème**, choisir **Mode clair** (par défaut), **Mode sombre**
@@ -167,7 +168,6 @@ Le choix est mémorisé pour les prochains lancements. L’impression utilise le
 
 **Configuration → Token → GitHub** ouvre le réglage du jeton.
 **Configuration → Structure JSON** ouvre le fichier projet dans l’éditeur intégré.
-Sur macOS, **Statistiques** et **Aide** contiennent chacune une seule commande.
 
 ### Créer un nouveau projet
 

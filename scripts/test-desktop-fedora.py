@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert any(n.get_role_name()=='link' and n.get_name()=='Voir le commit sur GitHub' for n in walk(a))
   bar=next(n for n in walk(a) if n.get_role_name()=='menu bar')
   assert [bar.get_child_at_index(i).get_name() for i in range(bar.get_child_count())]==[
-   'Fichier','Édition','Affichage','Configuration','Statistiques','Aide']
+   'Fichier','Édition','Affichage','Configuration']
   assert not any(n.get_name()=='Afficher les actions' for n in walk(a))
   def menu(*path):
    root=next(n for n in walk(app()) if n.get_role_name()=='menu bar')
@@ -134,7 +134,15 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   menu('Configuration','Token','GitHub');click('Enregistrer')
   preferences=d/'config'/'com.gitjournal.desktop'/'settings.json'
   wait_for(lambda:preferences.exists() and json.loads(preferences.read_text()).get('githubToken')=='')
-  menu('Statistiques');wait_for(lambda:find('button','Annuler'))
+  table=wait_for(lambda:next((n for n in walk(app()) if n.get_role_name()=='table'),None))
+  stats_button=wait_for(lambda:find('button','Statistiques'))
+  help_button=wait_for(lambda:find('button','Aide'))
+  table_rect,stats_rect,help_rect=[
+   Atspi.Component.get_extents(n,Atspi.CoordType.SCREEN) for n in (table,stats_button,help_button)]
+  assert max(stats_rect.y+stats_rect.height,help_rect.y+help_rect.height)<=table_rect.y
+  assert stats_rect.x+stats_rect.width<=help_rect.x
+  assert stats_rect.x>table_rect.x+table_rect.width/2
+  click('Statistiques');wait_for(lambda:find('button','Annuler'))
   def accessible_label(n):
    try:return n.get_name() or Atspi.Text.get_text(n,0,-1)
    except Exception:return ''
@@ -142,7 +150,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert any('Durée par jour' in name for name in names)
   assert any('Répartition des statuts' in name for name in names)
   click('Annuler')
-  menu('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
+  click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
   print('Préférences, statistiques et aide ouvertes et fermées.')
   def native_dialog(title):
    candidate=app()
