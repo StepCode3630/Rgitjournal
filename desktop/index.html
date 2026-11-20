@@ -54,5 +54,86 @@
         </footer>
       </form>
     </dialog>
+    <template id="help-content">
+      <div class="help-content">
+        <section aria-labelledby="help-commits">
+          <h3 id="help-commits">Enregistrer le travail dans un commit</h3>
+          <p>
+            Pour qu’un commit apparaisse dans le journal, indiquez une durée
+            positive dans son message. Ajoutez le statut <code>DONE</code> pour
+            une tâche terminée ou <code>WIP</code> pour une tâche en cours.
+          </p>
+          <h4>Dans le terminal</h4>
+          <p>Indexez vos modifications, puis exécutez cette commande.</p>
+          <pre><code>git commit -m "feat(utilisateurs): exemple" -m "[45][DONE]" -m "Description"</code></pre>
+          <p>
+            Le premier <code>-m</code> donne le titre. Le deuxième indique
+            45 minutes et le statut terminé. Le troisième décrit le travail.
+          </p>
+          <h4>Dans une interface graphique</h4>
+          <p>
+            Dans GitKraken ou un autre client Git, saisissez
+            <code>feat(utilisateurs): exemple</code> dans le champ du titre.
+            Dans le corps du message, saisissez <code>[45][DONE]</code> sur
+            la première ligne, puis <code>Description</code> à la ligne suivante.
+          </p>
+          <figure>
+            <img
+              src="GitKrakenModalHelp.png"
+              alt="GitKraken avec le titre « chore: exemple » et le corps « [45] [Wip] », suivi de « Description »."
+              width="402"
+              height="193"
+            />
+            <figcaption>Exemple dans GitKraken pour une tâche de 45 minutes encore en cours.</figcaption>
+          </figure>
+          <p>
+            Dans GitJournal, choisissez <strong>Affichage → Actualiser</strong>
+            pour relire les commits locaux. Les filtres d’auteur et de date du
+            projet s’appliquent à toutes les branches locales.
+          </p>
+        </section>
+        <details>
+          <summary>Autres formats de durée</summary>
+          <p>
+            <code>[2h30 done]</code> indique 2 h 30 et le statut terminé,
+            <code>[45m wip]</code> indique 45 minutes et le statut en cours,
+            <code>[5]</code> indique 5 minutes et <code>[2][30][Done]</code>
+            indique 2 h 30 et le statut terminé. La première ligne de
+            métadonnées reconnue fait foi.
+          </p>
+        </details>
+        <details>
+          <summary>Fichier projet, saisie manuelle et export</summary>
+          <p>
+            Placez le fichier <code>.gitj</code> à la racine du dépôt ou dans
+            un sous-dossier comme <code>doc/Journal</code>. GitJournal retrouve
+            le dépôt parent. Si vous utilisez plusieurs identités Git,
+            séparez les noms par une virgule ou un point-virgule.
+          </p>
+          <p>
+            Utilisez <strong>Ajouter une entrée</strong> pour saisir du travail
+            manuellement. Les modifications sont enregistrées automatiquement.
+            <strong>Fichier → Exporter</strong> propose le PDF, le Markdown et
+            le CSV. Les périodes et colonnes du rapport se règlent dans
+            <strong>Configuration → Structure Export</strong>.
+          </p>
+        </details>
+        <details>
+          <summary>Configuration et raccourcis</summary>
+          <p>
+            <strong>Configuration → Structure JSON</strong> permet de personnaliser
+            les colonnes. Activez <code>includeIssues</code> pour inclure les
+            commentaires GitHub en lecture seule, même sans durée.
+            <code>githubUsers</code> permet d’ajouter des comptes GitHub au filtre.
+          </p>
+          <p>
+            Ctrl/Cmd + N pour créer un projet, O pour l’ouvrir, S pour enregistrer,
+            R pour actualiser, E pour exporter en PDF, Maj + E pour exporter en
+            CSV et P pour imprimer. Ctrl/Cmd + virgule ouvre le réglage du jeton
+            GitHub. Ctrl/Cmd + +, − ou 0 règle le zoom.
+          </p>
+        </details>
+      </div>
+    </template>
   </body>
 </html>

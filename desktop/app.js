@@ -546,24 +546,7 @@ const actions = {
   help: () =>
     dialog(
       "Aide GitJournal",
-      [
-        node(
-          "p",
-          "Placez le fichier .gitj dans le dépôt, à la racine ou dans un sous-dossier (par exemple doc/Journal). Git retrouve automatiquement le dépôt parent. Les commits locaux de toutes les branches sont filtrés par auteur et date. Les durées proviennent exclusivement des métadonnées déclarées.",
-        ),
-        node(
-          "p",
-          "Formats : [2h30 done], [45m wip], [5], [2][30][Done]. La première ligne reconnue fait foi. Les commentaires GitHub sont en lecture seule et peuvent être inclus sans durée.",
-        ),
-        node(
-          "p",
-          "Configuration : colonnes personnalisées, source, field, regex, group, format, type select/dropdown et values/options. includeIssues active les commentaires ; githubUsers ajoute des logins.",
-        ),
-        node(
-          "p",
-          "Raccourcis : Ctrl/Cmd+N nouveau, O ouvrir, S enregistrer, R actualiser, E PDF, Maj+E CSV, P imprimer. Token GitHub : Ctrl/Cmd+virgule. Zoom : Ctrl/Cmd + / − / 0.",
-        ),
-      ],
+      [$("help-content").content.cloneNode(true)],
       null,
     ),
 };

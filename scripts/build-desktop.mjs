@@ -17,3 +17,7 @@ await copyFile(
   new URL("../src/server/lib/description-filter.js", import.meta.url),
   new URL("description-filter.js", output),
 );
+await copyFile(
+  new URL("../src/assets/GitKrakenModalHelp.png", import.meta.url),
+  new URL("GitKrakenModalHelp.png", output),
+);

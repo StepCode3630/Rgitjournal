@@ -184,7 +184,13 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   wait_for(lambda:any('Évolution de la durée' in accessible_label(n) for n in walk(app())))
   assert any('Répartition des statuts' in name for name in names)
   click('Annuler')
-  click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
+  click('Aide')
+  wait_for(lambda:find('heading','Dans le terminal'))
+  wait_for(lambda:find('heading','Dans une interface graphique'))
+  help_command='git commit -m "feat(utilisateurs): exemple" -m "[45][DONE]" -m "Description"'
+  assert any(help_command in accessible_label(n) for n in walk(app()))
+  wait_for(lambda:next((n for n in walk(app()) if n.get_role_name()=='image' and n.get_name().startswith('GitKraken avec le titre')),None))
+  click('Annuler')
   print('Préférences, statistiques et aide ouvertes et fermées.')
   def native_dialog(title):
    candidate=app()

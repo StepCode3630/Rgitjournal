@@ -685,3 +685,48 @@ footer {
 .stats-wip {
   margin-block: 1rem;
 }
+
+.help-content {
+  line-height: 1.55;
+}
+
+.help-content h4 {
+  margin-block-end: 0.35rem;
+}
+
+.help-content pre {
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.help-content figure {
+  margin: 1rem 0;
+}
+
+.help-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.help-content figcaption {
+  margin-block-start: 0.35rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.help-content details {
+  padding-block: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.help-content summary {
+  cursor: pointer;
+  font-weight: 600;
+}
