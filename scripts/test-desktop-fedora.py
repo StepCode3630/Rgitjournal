@@ -147,7 +147,19 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    try:return n.get_name() or Atspi.Text.get_text(n,0,-1)
    except Exception:return ''
   names=[accessible_label(n) for n in walk(app())]
-  assert any('Durée par jour' in name for name in names)
+  assert any('Évolution de la durée' in name for name in names)
+  assert any('Mêmes jours écoulés' in name for name in names)
+  assert any('Temps par type de tâche' in name for name in names)
+  assert any('Répartition par source' in name for name in names)
+  assert any('WIP à revoir (1)' in name for name in names)
+  click('feat')
+  wait_for(lambda:find('heading','Entrées · feat'))
+  pending=wait_for(lambda:next((n for n in walk(app()) if n.get_role_name()=='button' and 'feat: manual' in n.get_name().lower()),None))
+  assert pending.get_action_iface().do_action(0)
+  wait_for(lambda:not find('button','Annuler'))
+  click('Statistiques')
+  select_field('Période des statistiques',1)
+  wait_for(lambda:any('Évolution de la durée' in accessible_label(n) for n in walk(app())))
   assert any('Répartition des statuts' in name for name in names)
   click('Annuler')
   click('Aide');wait_for(lambda:find('button','Annuler'));click('Annuler')
@@ -191,11 +203,13 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
     assert float(size[2]) < float(size[4]),info
     text=subprocess.check_output(['pdftotext','-enc','UTF-8',str(output),'-'],text=True,encoding='utf-8')
     assert 'Tâche vérifiée' in text and 'Total de la sélection' in text and 'Statistiques' in text
+    assert 'Commits Git' in text and 'Entrées manuelles' not in text
     assert 'manual' not in text.lower()
    else:
     text=output.read_text(encoding='utf-8')
     assert text.startswith('| Tâche | Description | Durée | Statut | Lien source |')
     assert 'Tâche vérifiée' in text and 'Total de la sélection' in text and 'Statistiques' in text
+    assert 'Commits Git' in text and 'Entrées manuelles' not in text
     assert '[Voir la source](https://github.com/example/gui-fixture/commit/' in text
     assert 'manual' not in text.lower()
    print(label+' créé depuis la fenêtre Tauri et contenu vérifié.')

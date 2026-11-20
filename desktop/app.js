@@ -13,6 +13,8 @@ import {
   entryDateIso,
   gitHost,
   journalSummary,
+  statisticsPeriod,
+  durationTimeline,
   minutesLabel,
 } from "./model.js";
 import { condenseDescription } from "./description-filter.js";
@@ -159,7 +161,18 @@ function barChart(title, caption, items, format) {
     });
     bar.style.width = `${(Math.abs(item.value) / max) * (signed ? 50 : 100)}%`;
     track.append(bar);
-    row.append(
+    const content = item.activate
+      ? node("button", undefined, {
+          type: "button",
+          class: "chart-trigger",
+          "aria-label": item.label,
+        })
+      : row;
+    if (item.activate) {
+      content.onclick = item.activate;
+      row.append(content);
+    }
+    content.append(
       node("span", item.label, { class: "chart-label" }),
       track,
       node("span", format(item.value), { class: "chart-value" }),
@@ -527,87 +540,7 @@ const actions = {
   print: () => {
     if (project) window.print();
   },
-  stats: () => {
-    const summary = journalSummary(entries);
-    const cards = node("div", undefined, { class: "stat-cards" });
-    for (const [label, value] of [
-      ["Durée déclarée", minutesLabel(summary.totalMinutes)],
-      ["Jours avec entrées", String(summary.activeDays)],
-      ["Entrées affichées", String(summary.entryCount)],
-    ]) {
-      const card = node("div", undefined, { class: "stat-card" });
-      card.append(node("span", label), node("strong", value));
-      cards.append(card);
-    }
-    const charts = node("div", undefined, { class: "stat-charts" });
-    if (summary.entryCount) {
-      if (summary.days.length)
-        charts.append(
-          barChart(
-            "Durée par jour",
-            "Les 7 derniers jours du journal · regroupement UTC",
-            summary.days.map((day) => ({
-              label: new Date(day.day).toLocaleDateString("fr-CH", {
-                day: "2-digit",
-                month: "2-digit",
-                timeZone: "UTC",
-              }),
-              value: day.minutes,
-            })),
-            minutesLabel,
-          ),
-        );
-      charts.append(
-        barChart(
-          "Répartition des statuts",
-          "Nombre d’entrées, y compris celles sans durée",
-          summary.statuses.map((item) => ({
-            label: item.label,
-            value: item.count,
-          })),
-          String,
-        ),
-      );
-    } else
-      charts.append(
-        node(
-          "p",
-          "Aucune entrée à représenter. Ouvrez un projet ou adaptez ses filtres.",
-        ),
-      );
-    const list = node("dl");
-    for (const [key, label] of [
-      ["fromUser", "Commits correspondant aux filtres"],
-      ["withMetadata", "Commits avec durée"],
-      ["afterExclusions", "Commits après exclusions"],
-      ["manualEntries", "Entrées manuelles"],
-      ["issueComments", "Commentaires GitHub"],
-      ["total", "Total des entrées"],
-    ]) {
-      list.append(node("dt", label), node("dd", String(stats[key] ?? 0)));
-    }
-    const details = node("details", undefined, { class: "collection-details" });
-    details.append(
-      node("summary", "Détail de la collecte"),
-      list,
-      node("p", "Auteurs Git trouvés : " + (stats.gitUsers ?? []).join(", ")),
-    );
-    dialog(
-      "Statistiques",
-      [
-        cards,
-        charts,
-        node(
-          "p",
-          "Durées issues des métadonnées et entrées manuelles du journal filtré ; aucune heure de travail n’est estimée.",
-          { class: "chart-caption" },
-        ),
-        details,
-      ],
-      null,
-    );
-    $("modal").classList.add("stats-dialog");
-  },
+  stats: showStatistics,
   help: () =>
     dialog(
       "Aide GitJournal",
@@ -632,6 +565,211 @@ const actions = {
       null,
     ),
 };
+const statisticsDate = new Intl.DateTimeFormat("fr-CH", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function timelineLabel(start, end) {
+  const first = statisticsDate.format(new Date(start));
+  return start === end
+    ? first
+    : `${first} au ${statisticsDate.format(new Date(end))}`;
+}
+
+function statisticsEntries(list) {
+  const items = node("ul", undefined, { class: "stat-entry-list" });
+  for (const entry of list) {
+    const date = statisticsDate.format(new Date(entry.date));
+    const button = node(
+      "button",
+      `${date} · ${entry.name || "Entrée sans titre"}`,
+      { type: "button" },
+    );
+    button.onclick = () => {
+      const row = journalRows.get(entry);
+      if (!row) return;
+      $("modal").close();
+      if (!row.hasAttribute("tabindex")) row.tabIndex = -1;
+      row.focus({ preventScroll: true });
+      row.scrollIntoView({ block: "center" });
+    };
+    const item = node("li");
+    item.append(button);
+    items.append(item);
+  }
+  return items;
+}
+
+function showStatistics() {
+  const today = new Date().toISOString().slice(0, 10);
+  const period = node("select", undefined, {
+    "aria-label": "Période des statistiques",
+  });
+  for (const [value, label] of [
+    ["week", "Cette semaine"],
+    ["month", "Ce mois"],
+    ["range", "Période personnalisée"],
+    ["all", "Tout le journal"],
+  ])
+    period.append(node("option", label, { value }));
+  const start = field("Du (UTC)", "stats-start", today, "date");
+  const end = field("Au (UTC)", "stats-end", today, "date");
+  const controls = node("div", undefined, { class: "stats-period" });
+  const periodLabel = node("label", "Période");
+  periodLabel.append(period);
+  controls.append(periodLabel, start, end);
+  const dates = node("p", undefined, { role: "status" });
+  const content = node("div");
+  const list = node("dl");
+  for (const [key, label] of [
+    ["fromUser", "Commits correspondant aux filtres"],
+    ["withMetadata", "Commits avec durée"],
+    ["withoutDuration", "Commits écartés faute de durée"],
+    ["afterExclusions", "Commits après exclusions"],
+    ["manualEntries", "Entrées manuelles"],
+    ["issueComments", "Commentaires GitHub"],
+    ["total", "Total des entrées"],
+  ]) {
+    list.append(node("dt", label), node("dd", String(stats[key] ?? 0)));
+  }
+  const details = node("details", undefined, { class: "collection-details" });
+  details.append(
+    node("summary", "Détail de la collecte du projet"),
+    list,
+    node("p", "Auteurs Git trouvés : " + (stats.gitUsers ?? []).join(", ")),
+  );
+
+  function update() {
+    const mode = period.value;
+    start.hidden = end.hidden = mode !== "range";
+    content.replaceChildren();
+    let selection;
+    try {
+      selection = statisticsPeriod(
+        {
+          period: mode,
+          start: start.querySelector("input").value,
+          end: end.querySelector("input").value,
+        },
+        today,
+      );
+    } catch (error) {
+      dates.textContent = error.message;
+      return;
+    }
+    const { range, previous, elapsed } = selection;
+    dates.textContent = range.start
+      ? `${timelineLabel(range.start, range.end)} · UTC`
+      : "Tout le journal · UTC";
+    const summary = journalSummary(
+      exportEntries(entries, {
+        period: range.start ? "range" : "all",
+        ...range,
+      }),
+    );
+    const cards = node("div", undefined, { class: "stat-cards" });
+    for (const [label, value] of [
+      ["Durée déclarée", minutesLabel(summary.totalMinutes)],
+      ["Jours avec entrées", String(summary.activeDays)],
+      ["Entrées affichées", String(summary.entryCount)],
+      [
+        "Avec une durée renseignée",
+        `${summary.withDuration} sur ${summary.entryCount}`,
+      ],
+    ]) {
+      const card = node("div", undefined, { class: "stat-card" });
+      card.append(node("span", label), node("strong", value));
+      cards.append(card);
+    }
+    content.append(cards);
+    if (previous) {
+      const minutesFor = (range) =>
+        journalSummary(exportEntries(entries, { period: "range", ...range }))
+          .totalMinutes;
+      const current = minutesFor(elapsed);
+      const before = minutesFor(previous);
+      const delta = current - before;
+      content.append(
+        node(
+          "p",
+          `Mêmes jours écoulés · ${timelineLabel(elapsed.start, elapsed.end)} : ${minutesLabel(current)} · ${timelineLabel(previous.start, previous.end)} : ${minutesLabel(before)} · Écart : ${delta > 0 ? "+" : ""}${minutesLabel(delta)}`,
+          { class: "chart-caption" },
+        ),
+      );
+    }
+    if (!summary.entryCount) {
+      content.append(node("p", "Aucune entrée sur cette période."));
+      return;
+    }
+
+    const charts = node("div", undefined, { class: "stat-charts" });
+    const breakdown = node("section", undefined, { class: "stat-chart" });
+    breakdown.hidden = true;
+    const timeline = durationTimeline(summary.days, range, mode === "month");
+    charts.append(
+      barChart(
+        "Évolution de la durée",
+        "Durées déclarées · regroupement UTC",
+        timeline.map(({ start, end, minutes }) => ({
+          label: timelineLabel(start, end),
+          value: minutes,
+        })),
+        minutesLabel,
+      ),
+      barChart(
+        "Temps par type de tâche",
+        "Sélectionnez un préfixe pour voir ses entrées.",
+        summary.types.map(({ label, minutes, entries: matching }) => ({
+          label,
+          value: minutes,
+          activate: () => {
+            const title = node("h3", `Entrées · ${label}`, { tabindex: "-1" });
+            breakdown.replaceChildren(title, statisticsEntries(matching));
+            breakdown.hidden = false;
+            title.focus();
+          },
+        })),
+        minutesLabel,
+      ),
+      barChart(
+        "Répartition des statuts",
+        "Nombre d’entrées, y compris celles sans durée",
+        summary.statuses.map(({ label, count }) => ({ label, value: count })),
+        String,
+      ),
+    );
+    const sources = node("section", undefined, { class: "stat-chart" });
+    const sourceList = node("ul");
+    for (const { label, count, minutes, withoutDuration } of summary.sources) {
+      sourceList.append(
+        node(
+          "li",
+          `${label} · ${count} entrée(s) · ${minutesLabel(minutes)} · ${withoutDuration} sans durée renseignée`,
+        ),
+      );
+    }
+    sources.append(node("h3", "Répartition par source"), sourceList);
+    charts.append(sources);
+    const pending = node("section", undefined, {
+      class: "stat-chart stats-wip",
+    });
+    pending.append(
+      node("h3", `WIP à revoir (${summary.wip.length})`),
+      summary.wip.length
+        ? statisticsEntries(summary.wip)
+        : node("p", "Aucune entrée WIP sur cette période."),
+    );
+    content.append(charts, breakdown, pending);
+  }
+  controls.oninput = update;
+  dialog("Statistiques", [controls, dates, content, details], null);
+  $("modal").classList.add("stats-dialog");
+  update();
+}
+
 function exportColumns() {
   const occurrences = new Map();
   return project.columns.map((column, index) => {
@@ -930,6 +1068,26 @@ function exportReport(format, options, included) {
       ["Entrées", summary.entryCount],
       ["Jours avec entrées", summary.activeDays],
       ["Durée totale (min)", summary.totalMinutes],
+      ["Entrées avec une durée renseignée", summary.withDuration],
+      ...durationTimeline(
+        summary.days,
+        exportPeriod(options),
+        options.period === "month",
+      ).map(({ start, end, minutes }) => [
+        `Durée · ${timelineLabel(start, end)} (min)`,
+        minutes,
+      ]),
+      ...summary.types.map(({ label, minutes }) => [
+        `Type · ${label} (min)`,
+        minutes,
+      ]),
+      ...summary.sources.flatMap(
+        ({ label, count, minutes, withoutDuration }) => [
+          [`${label} · Entrées`, count],
+          [`${label} · Durée (min)`, minutes],
+          [`${label} · Sans durée renseignée`, withoutDuration],
+        ],
+      ),
       ...summary.statuses.map(({ label, count }) => [label, count]),
     ]) {
       addRow(

@@ -346,7 +346,7 @@ textarea {
 }
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
 }
 .stat-card {
@@ -392,13 +392,20 @@ textarea {
   padding: 0;
   margin: 1rem 0 0;
 }
-.chart-bars li {
+.chart-bars li,
+.chart-trigger {
   display: grid;
   grid-template-columns: minmax(4rem, 1fr) 1.5fr auto;
   gap: 0.65rem;
   align-items: center;
-  margin-block: 0.8rem;
   font-size: 0.8rem;
+}
+.chart-bars li {
+  margin-block: 0.8rem;
+}
+.chart-trigger {
+  grid-column: 1 / -1;
+  text-align: start;
 }
 .chart-label {
   overflow-wrap: anywhere;
@@ -595,4 +602,31 @@ footer {
 .export-preview {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.stats-period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.stats-period label[hidden] {
+  display: none;
+}
+
+.stat-entry-list {
+  padding-inline-start: 1.25rem;
+}
+
+.stat-entry-list li + li {
+  margin-block-start: 0.35rem;
+}
+
+.stat-entry-list button {
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.stats-wip {
+  margin-block: 1rem;
 }

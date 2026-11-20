@@ -97,7 +97,9 @@ try {
   assert.deepEqual(actual.entries, expected.entries);
   expected.stats.gitUsers.sort();
   actual.stats.gitUsers.sort();
-  assert.deepEqual(actual.stats, expected.stats);
+  const { withoutDuration, ...parityStats } = actual.stats;
+  assert.equal(withoutDuration, 1);
+  assert.deepEqual(parityStats, expected.stats);
   assert.equal(actual.remoteBaseUrl, expected.remoteBaseUrl);
   // Ancien projet situé sous doc/Journal : aucune colonne, ancien repoUrl et
   // branche obsolète. Les commits viennent toujours du dépôt local contenant le fichier.

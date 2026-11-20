@@ -39,26 +39,71 @@ export function minutesLabel(value) {
   return `${value < 0 ? "−" : ""}${Math.floor(minutes / 60)}h ${Math.round((minutes % 60) * 100) / 100}min`;
 }
 
+function entryStatus(entry) {
+  return String(entry.status ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function entrySource(entry) {
+  return entry.commentId || ["issue", "pr"].includes(entry.source)
+    ? "github"
+    : entry.source;
+}
+
 export function journalSummary(entries) {
-  const totals = new Map();
+  const days = new Map();
   const statuses = new Map([
     ["Done", 0],
     ["WIP", 0],
     ["Autre / non renseigné", 0],
   ]);
+  const types = new Map();
+  const sources = new Map([
+    [
+      "commit",
+      { label: "Commits Git", count: 0, minutes: 0, withoutDuration: 0 },
+    ],
+    [
+      "manual",
+      { label: "Entrées manuelles", count: 0, minutes: 0, withoutDuration: 0 },
+    ],
+    [
+      "github",
+      {
+        label: "Commentaires GitHub",
+        count: 0,
+        minutes: 0,
+        withoutDuration: 0,
+      },
+    ],
+    [
+      "other",
+      { label: "Autres sources", count: 0, minutes: 0, withoutDuration: 0 },
+    ],
+  ]);
+  const wip = [];
   let totalMinutes = 0;
+  let withDuration = 0;
   for (const entry of entries) {
-    const duration = Number(entry.duration ?? 0);
-    const minutes = Number.isFinite(duration) ? duration : 0;
+    const sourceKey = entrySource(entry);
+    const duration = Number(entry.duration);
+    const hasDuration =
+      (typeof entry.duration === "number" ||
+        (typeof entry.duration === "string" && entry.duration.trim() !== "")) &&
+      Number.isFinite(duration) &&
+      (sourceKey !== "github" ||
+        duration !== 0 ||
+        entry.durationDeclared === true);
+    const minutes = hasDuration ? duration : 0;
+    if (hasDuration) withDuration++;
     totalMinutes += minutes;
     const date = new Date(entry.date);
     if (Number.isFinite(date.getTime())) {
       const day = date.toISOString().slice(0, 10);
-      totals.set(day, (totals.get(day) ?? 0) + minutes);
+      days.set(day, (days.get(day) ?? 0) + minutes);
     }
-    const status = String(entry.status ?? "")
-      .trim()
-      .toLowerCase();
+    const status = entryStatus(entry);
     const key =
       status === "done"
         ? "Done"
@@ -66,22 +111,31 @@ export function journalSummary(entries) {
           ? "WIP"
           : "Autre / non renseigné";
     statuses.set(key, statuses.get(key) + 1);
+    if (status === "wip") wip.push(entry);
+    const label = taskPrefix(entry.name) || "Sans préfixe";
+    if (!types.has(label)) types.set(label, { label, minutes: 0, entries: [] });
+    const type = types.get(label);
+    type.minutes += minutes;
+    type.entries.push(entry);
+    const source = sources.get(sourceKey) ?? sources.get("other");
+    source.count++;
+    source.minutes += minutes;
+    if (!hasDuration) source.withoutDuration++;
   }
-  const lastDay = [...totals.keys()].sort().at(-1);
-  const days = lastDay
-    ? Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(lastDay + "T00:00:00Z");
-        date.setUTCDate(date.getUTCDate() - 6 + i);
-        const day = date.toISOString().slice(0, 10);
-        return { day, minutes: totals.get(day) ?? 0 };
-      })
-    : [];
   return {
     totalMinutes,
-    activeDays: totals.size,
+    activeDays: days.size,
     entryCount: entries.length,
-    days,
+    withDuration,
+    days: [...days]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, minutes]) => ({ day, minutes })),
     statuses: [...statuses].map(([label, count]) => ({ label, count })),
+    types: [...types.values()].sort(
+      (a, b) => b.minutes - a.minutes || a.label.localeCompare(b.label),
+    ),
+    sources: [...sources.values()].filter((item) => item.count),
+    wip: wip.sort((a, b) => new Date(a.date) - new Date(b.date)),
   };
 }
 
@@ -204,17 +258,59 @@ export function exportPeriod({ period, start, end, reference }) {
   };
 }
 
+function shiftDay(day, offset) {
+  const date = utcDay(day);
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
+
+export function statisticsPeriod(options, today) {
+  const range = exportPeriod({ ...options, reference: today });
+  if (options.period !== "week") return { range };
+  return {
+    range,
+    previous: { start: shiftDay(range.start, -7), end: shiftDay(today, -7) },
+    elapsed: { start: range.start, end: today },
+  };
+}
+
+export function durationTimeline(days, { start, end } = {}, byWeek = false) {
+  if (!days.length) return [];
+  start ??= days[0].day;
+  end ??= days.at(-1).day;
+  const span = (utcDay(end) - utcDay(start)) / 86400000;
+  const weekly = byWeek || span > 30;
+  const bucket = (day) => {
+    if (!weekly) return day;
+    const monday = exportPeriod({ period: "week", reference: day }).start;
+    return monday < start ? start : monday;
+  };
+  const totals = new Map();
+  // De très longues périodes affichent uniquement leurs semaines actives.
+  if (span <= 62) {
+    for (let offset = 0; offset <= span; offset++)
+      totals.set(bucket(shiftDay(start, offset)), 0);
+  }
+  for (const { day, minutes } of days) {
+    const key = bucket(day);
+    totals.set(key, (totals.get(key) ?? 0) + minutes);
+  }
+  return [...totals].map(([day, minutes]) => ({
+    start: day,
+    end: weekly
+      ? [end, exportPeriod({ period: "week", reference: day }).end].sort()[0]
+      : day,
+    minutes,
+  }));
+}
+
 export function exportEntries(entries, options = {}) {
   const { start, end } = exportPeriod(options);
   return entries.filter((entry) => {
     const day = new Date(entry.date).toISOString().slice(0, 10);
-    const status = String(entry.status ?? "")
-      .trim()
-      .toLowerCase();
+    const status = entryStatus(entry);
     const author = Array.isArray(entry.author) ? entry.author : [entry.author];
-    const source = ["issue", "pr"].includes(entry.source)
-      ? "github"
-      : entry.source;
+    const source = entrySource(entry);
     return (
       (!start || (day >= start && day <= end)) &&
       (!options.author || author.includes(options.author)) &&

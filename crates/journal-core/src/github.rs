@@ -141,7 +141,7 @@ pub fn groom_comment(comment: &Value, issue: Option<&Value>) -> Value {
         })
         .unwrap_or(0);
     json!({"commentId":comment["id"],"source":if issue.is_some_and(|i| i["pull_request"].is_object()) {"pr"} else {"issue"},"issueNumber":number,
-        "name":format!("#{number} {}",issue.and_then(|i|i["title"].as_str()).unwrap_or("")).trim(),"description":text,"date":comment["created_at"],"duration":duration,"status":status,"author":comment["user"]["login"].as_str().unwrap_or("?"),"url":comment["html_url"]})
+        "name":format!("#{number} {}",issue.and_then(|i|i["title"].as_str()).unwrap_or("")).trim(),"description":text,"date":comment["created_at"],"duration":duration,"durationDeclared":duration > 0 || !status.is_empty(),"status":status,"author":comment["user"]["login"].as_str().unwrap_or("?"),"url":comment["html_url"]})
 }
 
 pub fn read_comments(base: &str, project: &Value, token: &str) -> Result<Vec<Value>> {

@@ -330,12 +330,17 @@ Gitea selon l’adresse ; les autres hébergeurs ont une icône Git générique 
 leur nom de domaine en infobulle. Les icônes sont embarquées et ne déclenchent
 aucune requête réseau pour être affichées.
 
-**Statistiques** présente la durée déclarée, le nombre de jours avec entrées et
-le nombre d’entrées affichées, puis deux graphiques : durée des sept derniers
-jours du journal (UTC) et répartition des statuts. Les anciens statuts et les
-statuts absents sont regroupés séparément. Ces valeurs utilisent le journal
-filtré, sans estimation du temps travaillé ; les compteurs techniques restent
-disponibles sous **Détail de la collecte**.
+**Statistiques** permet de consulter la semaine en cours, le mois, un intervalle
+de dates ou tout le journal. Les périodes suivent le calendrier UTC. Le mode
+hebdomadaire compare les mêmes jours écoulés de la semaine précédente.
+L’évolution regroupe les durées par jour ou par semaine selon la période.
+
+La vue réunit la durée déclarée, les jours actifs, la couverture des durées et
+les répartitions par statut, préfixe de tâche et source. Cliquer sur un préfixe
+affiche ses entrées. La liste **WIP à revoir** présente les entrées de la plus
+ancienne à la plus récente. Chaque entrée renvoie à sa ligne du journal.
+Le détail de collecte du projet indique notamment les commits écartés faute
+de durée après le filtrage d’auteur et de date et l’exclusion des bots.
 
 ### Exporter
 
@@ -357,7 +362,8 @@ avant d’utiliser **Fichier → Exporter**. Les réglages sont enregistrés dan
   colonnes à conserver. Le formulaire affiche le nombre d’entrées correspondant
   aux filtres.
 - **Statistiques** — ajouter le nombre d’entrées, le nombre de jours actifs, la
-  durée totale en minutes et les comptes par statut. Ces valeurs portent sur la
+  durée totale, la couverture des durées et les répartitions par période, type,
+  source et statut. Ces valeurs portent sur la
   sélection exportée. En CSV, elles sont ajoutées à la fin du fichier sous forme
   de lignes avec le même nombre de colonnes que le tableau.
 - **Markdown** — afficher ou masquer le titre du projet et ajouter une colonne

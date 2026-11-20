@@ -212,6 +212,7 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
     let mut seen = HashSet::new();
     let mut entries = Vec::new();
     let mut count = 0;
+    let mut without_duration = 0;
     for record in raw.split('\u{1d}') {
         let fields: Vec<_> = record.trim().splitn(5, '\u{1e}').collect();
         if fields.len() != 5 || !seen.insert(fields[0]) {
@@ -223,6 +224,7 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
         }
         let mut e = groom(fields[4].trim());
         if e["duration"].as_u64().unwrap_or(0) == 0 {
+            without_duration += 1;
             continue;
         }
         let branch = re(r"^refs/(?:heads|tags)/|^refs/remotes/[^/]+/")
@@ -264,7 +266,7 @@ pub fn collect_local(repo: &Path, project: &Value) -> Result<Value> {
         .count();
     let entries = apply_exceptions(entries, &exceptions, !configured.is_empty());
     Ok(
-        json!({"stats":{"gitUsers":users,"fromUser":count,"withMetadata":with_metadata,"afterExclusions":after_exclusions,"manualEntries":manual,"total":entries.len(),"issueComments":0,"issuesError":null},"entries":entries,"remoteBaseUrl":base}),
+        json!({"stats":{"gitUsers":users,"fromUser":count,"withMetadata":with_metadata,"withoutDuration":without_duration,"afterExclusions":after_exclusions,"manualEntries":manual,"total":entries.len(),"issueComments":0,"issuesError":null},"entries":entries,"remoteBaseUrl":base}),
     )
 }
 

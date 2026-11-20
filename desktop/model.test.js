@@ -11,6 +11,8 @@ import {
   entryDateIso,
   gitHost,
   journalSummary,
+  statisticsPeriod,
+  durationTimeline,
   minutesLabel,
   markdown,
   exportEntries,
@@ -90,12 +92,11 @@ test("statistics use filtered entries, UTC days and historical statuses without 
   assert.equal(summary.totalMinutes, 70);
   assert.equal(summary.activeDays, 2);
   assert.equal(summary.entryCount, 4);
-  assert.equal(summary.days.length, 7);
   assert.deepEqual(summary.days.slice(-2), [
     { day: "2026-11-16", minutes: 30 },
     { day: "2026-11-17", minutes: 40 },
   ]);
-  assert.equal(summary.days[0].minutes, 0);
+  assert.equal(summary.withDuration, 3);
   assert.deepEqual(
     summary.statuses.map((s) => s.count),
     [1, 1, 2],
@@ -226,4 +227,72 @@ test("export formats support CSV separator and BOM options and a titleless Markd
     markdown("Projet", ["Tâche"], [["Essai"]], [], { heading: false }),
     "| Tâche |\n| --- |\n| Essai |\n",
   );
+});
+
+test("statistics distinguish missing durations, group sources and sort WIP entries", () => {
+  const first = {
+    date: "2026-11-17",
+    name: "fix(ui)!: Tâche",
+    source: "manual",
+    duration: 0,
+    status: "WIP",
+  };
+  const next = {
+    date: "2026-11-18",
+    name: "feat: Export",
+    source: "commit",
+    duration: 45,
+    status: "wip",
+  };
+  const summary = journalSummary([
+    next,
+    first,
+    { date: "2026-11-18", source: "issue", duration: 0 },
+    { date: "2026-11-18", source: "pr", duration: 0, durationDeclared: true },
+  ]);
+  assert.equal(summary.withDuration, 3);
+  assert.deepEqual(summary.wip, [first, next]);
+  assert.deepEqual(
+    summary.types.map((item) => item.label),
+    ["feat", "fix", "Sans préfixe"],
+  );
+  assert.deepEqual(summary.sources.at(-1), {
+    label: "Commentaires GitHub",
+    count: 2,
+    minutes: 0,
+    withoutDuration: 1,
+  });
+});
+
+test("statistics compare equivalent elapsed weekdays and clip monthly buckets", () => {
+  const { range, elapsed, previous } = statisticsPeriod(
+    { period: "week" },
+    "2026-01-01",
+  );
+  assert.deepEqual(range, { start: "2025-12-29", end: "2026-01-04" });
+  assert.deepEqual(elapsed, { start: "2025-12-29", end: "2026-01-01" });
+  assert.deepEqual(previous, { start: "2025-12-22", end: "2025-12-25" });
+  const timeline = durationTimeline(
+    [
+      { day: "2026-10-01", minutes: 30 },
+      { day: "2026-10-31", minutes: 15 },
+    ],
+    { start: "2026-10-01", end: "2026-10-31" },
+    true,
+  );
+  assert.deepEqual(timeline[0], {
+    start: "2026-10-01",
+    end: "2026-10-04",
+    minutes: 30,
+  });
+  assert.deepEqual(timeline[1], {
+    start: "2026-10-05",
+    end: "2026-10-11",
+    minutes: 0,
+  });
+  assert.deepEqual(timeline.at(-1), {
+    start: "2026-10-26",
+    end: "2026-10-31",
+    minutes: 15,
+  });
 });
