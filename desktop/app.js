@@ -33,6 +33,7 @@ const node = (tag, text, attributes = {}) => {
 };
 function status(message, error = false) {
   $("status").textContent = message;
+  $("status").title = message;
   $("status").classList.toggle("error", error);
 }
 async function run(fn) {
@@ -189,6 +190,7 @@ function render() {
   $("subtitle").textContent = project
     ? `${Array.isArray(project.me) ? project.me.join(" / ") : project.me}${project.journalStartDate ? " — Depuis le " + new Date(project.journalStartDate).toLocaleDateString("fr-CH") : ""}`
     : "Ouvrez ou créez un projet .gitj dans votre dépôt Git, à la racine ou dans un sous-dossier.";
+  for (const id of ["title", "subtitle"]) $(id).title = $(id).textContent;
   $("add").hidden = !project;
   $("journal").replaceChildren();
   journalRows.clear();

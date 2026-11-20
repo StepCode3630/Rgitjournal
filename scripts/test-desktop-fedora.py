@@ -137,11 +137,33 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   table=wait_for(lambda:next((n for n in walk(app()) if n.get_role_name()=='table'),None))
   stats_button=wait_for(lambda:find('button','Statistiques'))
   help_button=wait_for(lambda:find('button','Aide'))
-  table_rect,stats_rect,help_rect=[
-   Atspi.Component.get_extents(n,Atspi.CoordType.SCREEN) for n in (table,stats_button,help_button)]
-  assert max(stats_rect.y+stats_rect.height,help_rect.y+help_rect.height)<=table_rect.y
+  add_button=wait_for(lambda:find('button','+ Ajouter une entrée'))
+  def bounds(node):
+   return Atspi.Component.get_extents(node,Atspi.CoordType.SCREEN)
+  table_rect,add_rect,stats_rect,help_rect=map(bounds,(table,add_button,stats_button,help_button))
+  assert max(add_rect.y+add_rect.height,stats_rect.y+stats_rect.height,help_rect.y+help_rect.height)<=table_rect.y
+  assert add_rect.x+add_rect.width<=stats_rect.x
+  assert abs((add_rect.y+add_rect.height/2)-(stats_rect.y+stats_rect.height/2))<=2
   assert stats_rect.x+stats_rect.width<=help_rect.x
   assert stats_rect.x>table_rect.x+table_rect.width/2
+  heading=wait_for(lambda:next((n for n in walk(table) if n.get_role_name()=='column header'),None))
+  editor=wait_for(lambda:find('button','Modifier'))
+  subprocess.run(['wmctrl','-ir',window,'-e','0,-1,-1,680,290'],check=True)
+  wait_for(lambda:bounds(heading).width>0 and bounds(help_button).x < help_rect.x)
+  xdo.xdo_send_keysequence_window(xd,0,b'ctrl+plus',12000)
+  time.sleep(.2)
+  fixed_positions=[bounds(n).y for n in (add_button, stats_button, help_button, heading)]
+  row_y=bounds(editor).y
+  region=wait_for(lambda:next((n for n in walk(app()) if n.get_name()=='Tableau du journal'),None))
+  rect=bounds(region)
+  assert rect.height>20,rect.height
+  xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0)
+  for _ in range(3):xdo.xdo_click_window(xd,0,5)
+  wait_for(lambda:bounds(editor).y<row_y)
+  assert [bounds(n).y for n in (add_button, stats_button, help_button, heading)]==fixed_positions
+  xdo.xdo_send_keysequence_window(xd,0,b'ctrl+0',12000)
+  subprocess.run(['wmctrl','-ir',window,'-e','0,-1,-1,1200,800'],check=True)
+  print('Défilement du tableau seul et en-têtes fixes vérifiés dans une fenêtre réduite.')
   click('Statistiques');wait_for(lambda:find('button','Annuler'))
   def accessible_label(n):
    try:return n.get_name() or Atspi.Text.get_text(n,0,-1)

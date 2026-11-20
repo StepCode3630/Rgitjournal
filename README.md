@@ -324,7 +324,10 @@ Cliquer sur une ligne du tableau pour ouvrir le formulaire de modification.
 ### Consulter le journal et les statistiques
 
 Le tableau utilise des en-têtes sur une seule ligne, des lignes alternées et des
-totaux distincts. Il défile horizontalement si les colonnes dépassent la fenêtre.
+totaux distincts. Le tableau défile dans l’espace disponible, avec les en-têtes
+visibles. Il défile aussi horizontalement si les colonnes dépassent la fenêtre.
+**Ajouter une entrée**, **Statistiques** et **Aide** restent au-dessus du tableau.
+Les boîtes de dialogue longues défilent dans leur propre fenêtre.
 Les liens de commits affichent l’icône de GitHub, GitLab, Bitbucket, Codeberg ou
 Gitea selon l’adresse ; les autres hébergeurs ont une icône Git générique avec
 leur nom de domaine en infobulle. Les icônes sont embarquées et ne déclenchent
