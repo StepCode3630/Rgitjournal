@@ -75,7 +75,7 @@ jobs:
         run: |
           app=src-tauri/target/release/bundle/macos/RGitJournal.app
           executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
-          lipo -verify_arch arm64 "$app/Contents/MacOS/$executable"
+          lipo "$app/Contents/MacOS/$executable" -verify_arch arm64
           codesign --verify --deep --strict "$app"
       - uses: actions/upload-artifact@v4
         with:
