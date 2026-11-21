@@ -5,25 +5,49 @@ d’un dépôt Git local, d’entrées manuelles et de commentaires GitHub facul
 Le bureau exporte en PDF, Markdown et CSV. La CLI et l’action GitHub peuvent
 générer un journal Markdown automatiquement.
 
+RGitJournal est un fork du projet '[gitjournal](https://github.com/ETML-INF/gitjournal)' basé sur la version 4.1.1.
+
 ## Table des matières
 
-- [Installer l’application](#installer-lapplication)
-- [Désinstaller](#désinstaller)
-- [Compiler depuis les sources](#compiler-depuis-les-sources)
-- [Utilisation](#utilisation)
-  - [Créer un nouveau projet](#créer-un-nouveau-projet)
-  - [Ouvrir un projet existant](#ouvrir-un-projet-existant)
-  - [Format des messages de commit](#format-des-messages-de-commit)
-  - [Exporter](#exporter)
-- [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)
-- [Raccourcis clavier](#raccourcis-clavier)
-- [Versionner vos projets](#versionner-vos-projets)
-- [Tests](#tests)
-- [Préparer et publier une version](#préparer-et-publier-une-version)
-- [Contribuer](#contribuer)
-- [Structure du projet](#structure-du-projet)
-- [Dépannage](#dépannage)
-- [Préférences et compatibilité](#préférences-et-compatibilité)
+- [ RGitJournal](#-rgitjournal)
+  - [Table des matières](#table-des-matières)
+  - [Installer l’application](#installer-lapplication)
+    - [Windows 10 et Windows 11](#windows-10-et-windows-11)
+    - [macOS sur Apple Silicon](#macos-sur-apple-silicon)
+    - [Fedora](#fedora)
+    - [Ubuntu et Debian](#ubuntu-et-debian)
+    - [Mettre à jour](#mettre-à-jour)
+  - [Désinstaller](#désinstaller)
+  - [Compiler depuis les sources](#compiler-depuis-les-sources)
+    - [1. Installer les outils de développement](#1-installer-les-outils-de-développement)
+    - [2. Préparer et lancer le projet](#2-préparer-et-lancer-le-projet)
+    - [3. Construire et installer un paquet](#3-construire-et-installer-un-paquet)
+  - [Utilisation](#utilisation)
+    - [Créer un nouveau projet](#créer-un-nouveau-projet)
+    - [Format du fichier `.gitj`](#format-du-fichier-gitj)
+    - [Colonnes personnalisées](#colonnes-personnalisées)
+    - [Ouvrir un projet existant](#ouvrir-un-projet-existant)
+    - [Format des messages de commit](#format-des-messages-de-commit)
+    - [Commentaires d'issues](#commentaires-dissues)
+    - [Ajouter une entrée manuelle](#ajouter-une-entrée-manuelle)
+    - [Modifier ou exclure une entrée](#modifier-ou-exclure-une-entrée)
+    - [Consulter le journal et les statistiques](#consulter-le-journal-et-les-statistiques)
+    - [Exporter](#exporter)
+    - [Sauvegarder](#sauvegarder)
+  - [Journal automatique avec GitHub Actions](#journal-automatique-avec-github-actions)
+    - [En ligne de commande](#en-ligne-de-commande)
+  - [Raccourcis clavier](#raccourcis-clavier)
+  - [Versionner vos projets](#versionner-vos-projets)
+  - [Tests](#tests)
+  - [Préparer et publier une version](#préparer-et-publier-une-version)
+  - [Contribuer](#contribuer)
+  - [Structure du projet](#structure-du-projet)
+  - [Dépannage](#dépannage)
+    - [L'app ne démarre pas](#lapp-ne-démarre-pas)
+    - [Icône absente dans KDE Plasma sous Wayland](#icône-absente-dans-kde-plasma-sous-wayland)
+    - [Le journal est vide](#le-journal-est-vide)
+    - [Pas de liens GitHub dans le tableau](#pas-de-liens-github-dans-le-tableau)
+  - [Préférences et compatibilité](#préférences-et-compatibilité)
 
 ## Installer l’application
 
@@ -31,12 +55,12 @@ Ouvrir [GitHub Releases](https://github.com/StepCode3630/Rgitjournal/releases)
 et choisir la version souhaitée. Dans **Assets**, télécharger le paquet adapté
 à votre système.
 
-| Système | Architecture | Fichier à télécharger |
-|---|---|---|
-| Windows 10 ou 11 | x64 (Intel/AMD) | `.exe` (NSIS) ou `.msi` (Windows Installer) |
-| macOS | Apple Silicon (arm64) | `.dmg` |
-| Fedora | x64 (x86_64) | `.rpm` |
-| Ubuntu ou Debian compatible avec la base de compilation | x64 (amd64) | `.deb` |
+| Système                                                 | Architecture          | Fichier à télécharger                       |
+| ------------------------------------------------------- | --------------------- | ------------------------------------------- |
+| Windows 10 ou 11                                        | x64 (Intel/AMD)       | `.exe` (NSIS) ou `.msi` (Windows Installer) |
+| macOS                                                   | Apple Silicon (arm64) | `.dmg`                                      |
+| Fedora                                                  | x64 (x86_64)          | `.rpm`                                      |
+| Ubuntu ou Debian compatible avec la base de compilation | x64 (amd64)           | `.deb`                                      |
 
 Les liens **Source code (zip)** et **Source code (tar.gz)** contiennent le code
 du tag pour compiler l’application. GitHub les ajoute à chaque release.
@@ -120,12 +144,12 @@ dans les dépôts où ils ont été enregistrés.
 
 ## Désinstaller
 
-| Système | Étape |
-|---|---|
-| Windows | Ouvrir **Paramètres → Applications**, sélectionner **RGitJournal**, puis **Désinstaller**. |
-| macOS | Quitter RGitJournal, puis placer **RGitJournal.app** de **Applications** dans la Corbeille. |
-| Fedora | Exécuter `sudo dnf remove r-git-journal`. |
-| Ubuntu ou Debian | Exécuter `sudo apt remove r-git-journal`. |
+| Système          | Étape                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| Windows          | Ouvrir **Paramètres → Applications**, sélectionner **RGitJournal**, puis **Désinstaller**.  |
+| macOS            | Quitter RGitJournal, puis placer **RGitJournal.app** de **Applications** dans la Corbeille. |
+| Fedora           | Exécuter `sudo dnf remove r-git-journal`.                                                   |
+| Ubuntu ou Debian | Exécuter `sudo apt remove r-git-journal`.                                                   |
 
 Les fichiers `.gitj` restent dans vos dépôts. Les préférences locales sont
 décrites dans [Préférences et compatibilité](#préférences-et-compatibilité).
@@ -230,26 +254,42 @@ Le choix est mémorisé pour les prochains lancements. L’impression utilise le
   "columns": [
     { "label": "Date", "source": "date", "format": "date", "field": "date" },
     { "label": "Tâche", "source": "name", "field": "name" },
-    { "label": "Activité", "source": "activity", "field": "activity", "type": "select", "values": ["dev", "spec", "GP"] },
+    {
+      "label": "Activité",
+      "source": "activity",
+      "field": "activity",
+      "type": "select",
+      "values": ["dev", "spec", "GP"]
+    },
     { "label": "Description", "source": "description", "field": "description" },
-    { "label": "Durée", "source": "duration", "format": "duration", "field": "duration" },
-    { "label": "Statut", "source": "status", "format": "badge", "field": "status" },
+    {
+      "label": "Durée",
+      "source": "duration",
+      "format": "duration",
+      "field": "duration"
+    },
+    {
+      "label": "Statut",
+      "source": "status",
+      "format": "badge",
+      "field": "status"
+    },
     { "label": "Auteur", "source": "author" }
   ],
   "exceptions": []
 }
 ```
 
-| Champ | Obligatoire | Description |
-|---|---|---|
-| `projectName` | oui | Nom affiché dans le journal |
-| `me` | oui | Nom d'auteur git, ou liste de noms, pour filtrer vos commits |
-| `repoUrl` | non | URL du dépôt utilisée par le bureau pour les liens vers les commits (GitHub, GitLab, Bitbucket Cloud, Codeberg ou Gitea) |
-| `journalStartDate` | non | Date de début, format ISO 8601 |
-| `columns` | non pour les anciens fichiers | Colonnes affichées ; le bureau utilise les colonnes standard si ce champ est absent |
-| `exceptions` | oui | Entrées manuelles et modifications de commits |
-| `includeIssues` | non | `true` pour ajouter les commentaires d'issues dans l'application (défaut : `false`) |
-| `githubUsers` | non | Logins GitHub supplémentaires pour filtrer les commentaires d'issues |
+| Champ              | Obligatoire                   | Description                                                                                                              |
+| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `projectName`      | oui                           | Nom affiché dans le journal                                                                                              |
+| `me`               | oui                           | Nom d'auteur git, ou liste de noms, pour filtrer vos commits                                                             |
+| `repoUrl`          | non                           | URL du dépôt utilisée par le bureau pour les liens vers les commits (GitHub, GitLab, Bitbucket Cloud, Codeberg ou Gitea) |
+| `journalStartDate` | non                           | Date de début, format ISO 8601                                                                                           |
+| `columns`          | non pour les anciens fichiers | Colonnes affichées ; le bureau utilise les colonnes standard si ce champ est absent                                      |
+| `exceptions`       | oui                           | Entrées manuelles et modifications de commits                                                                            |
+| `includeIssues`    | non                           | `true` pour ajouter les commentaires d'issues dans l'application (défaut : `false`)                                      |
+| `githubUsers`      | non                           | Logins GitHub supplémentaires pour filtrer les commentaires d'issues                                                     |
 
 > L'application scanne toutes les branches automatiquement (`git log --all`).
 
@@ -264,7 +304,13 @@ La propriété `columns` permet d'ajouter des colonnes au journal. Pour une colo
 Pour afficher une liste déroulante dans le formulaire d'ajout ou de modification, ajouter `type: "select"` ou `type: "dropdown"` avec les valeurs autorisées :
 
 ```json
-{ "label": "Activité", "source": "activity", "field": "activity", "type": "select", "values": ["dev", "spec", "GP"] }
+{
+  "label": "Activité",
+  "source": "activity",
+  "field": "activity",
+  "type": "select",
+  "values": ["dev", "spec", "GP"]
+}
 ```
 
 `options` peut aussi être utilisé à la place de `values`.
@@ -310,22 +356,22 @@ Description détaillée...
 
 **Format compact (crochet unique) :**
 
-| Syntaxe | Résultat |
-|---|---|
-| `[2h30]` ou `[2h30m]` | 2h30 |
-| `[45m]` | 45 minutes |
-| `[1h]` | 1 heure |
-| `[5]` | 5 minutes (unité implicite) |
-| `[2h30 done]` | 2h30, statut Done |
-| `[45m wip]` | 45 min, statut WIP |
+| Syntaxe               | Résultat                    |
+| --------------------- | --------------------------- |
+| `[2h30]` ou `[2h30m]` | 2h30                        |
+| `[45m]`               | 45 minutes                  |
+| `[1h]`                | 1 heure                     |
+| `[5]`                 | 5 minutes (unité implicite) |
+| `[2h30 done]`         | 2h30, statut Done           |
+| `[45m wip]`           | 45 min, statut WIP          |
 
 **Format classique (multi-crochets) :**
 
-| Syntaxe | Résultat |
-|---|---|
-| `[2][30]` | 2h30 |
-| `[90]` | 90 minutes |
-| `[Done]` / `[WIP]` | statut |
+| Syntaxe            | Résultat   |
+| ------------------ | ---------- |
+| `[2][30]`          | 2h30       |
+| `[90]`             | 90 minutes |
+| `[Done]` / `[WIP]` | statut     |
 
 ### Commentaires d'issues
 
@@ -341,7 +387,7 @@ Contrairement aux commits, **tous les commentaires sont inclus**, même sans dur
 
 Les commentaires sont filtrés par auteur : leur login GitHub doit figurer dans `me` ou dans `githubUsers` (sans `.gitj`, tous les auteurs sont pris en compte).
 
-Dans l'application, activer `"includeIssues": true` dans le `.gitj`. Le token GitHub se définit dans **Configuration → Token → GitHub** (token fine-grained avec la permission *Issues : Read-only*) ; à défaut, il est lu dans `GH_TOKEN` / `GITHUB_TOKEN`, puis via `gh auth token` (GitHub CLI). Un dépôt public fonctionne sans token, dans la limite de 60 requêtes par heure.
+Dans l'application, activer `"includeIssues": true` dans le `.gitj`. Le token GitHub se définit dans **Configuration → Token → GitHub** (token fine-grained avec la permission _Issues : Read-only_) ; à défaut, il est lu dans `GH_TOKEN` / `GITHUB_TOKEN`, puis via `gh auth token` (GitHub CLI). Un dépôt public fonctionne sans token, dans la limite de 60 requêtes par heure.
 
 Les commentaires ne peuvent pas être modifiés ni exclus dans RGitJournal (les exceptions du `.gitj` ne s'appliquent qu'aux commits) : pour corriger un commentaire, le modifier sur GitHub.
 
@@ -396,12 +442,12 @@ de durée après le filtrage d’auteur et de date et l’exclusion des bots.
 
 ### Exporter
 
-| Action | Raccourci |
-|---|---|
-| Exporter en PDF | `Cmd+E` / `Ctrl+E` |
-| Exporter en CSV | `Cmd+Shift+E` / `Ctrl+Shift+E` |
+| Action                       | Raccourci                                 |
+| ---------------------------- | ----------------------------------------- |
+| Exporter en PDF              | `Cmd+E` / `Ctrl+E`                        |
+| Exporter en CSV              | `Cmd+Shift+E` / `Ctrl+Shift+E`            |
 | Exporter en Markdown (`.md`) | Menu **Fichier → Exporter → En Markdown** |
-| Imprimer | `Cmd+P` / `Ctrl+P` |
+| Imprimer                     | `Cmd+P` / `Ctrl+P`                        |
 
 Dans **Configuration → Structure Export**, choisir les entrées à inclure
 avant d’utiliser **Fichier → Exporter**. Les réglages sont enregistrés dans
@@ -448,22 +494,22 @@ Copier [doc/journal-workflow.yml](doc/journal-workflow.yml) dans `.github/workfl
 
 - rassemble les commits de **toutes les branches** (dédupliqués par SHA, avec le nom de la branche) et les commentaires d'issues ;
 - est regroupé par jour (fuseau `Europe/Zurich`), du plus récent au plus ancien ;
-- est écrit sur la branche par défaut, même quand le push concerne `develop`. Si `main` exige des pull requests, ajouter **GitHub Actions** aux exceptions (*Bypass list*) de la règle, ou écrire le journal sur une branche dédiée avec `branch: journal` ;
+- est écrit sur la branche par défaut, même quand le push concerne `develop`. Si `main` exige des pull requests, ajouter **GitHub Actions** aux exceptions (_Bypass list_) de la règle, ou écrire le journal sur une branche dédiée avec `branch: journal` ;
 - utilise le `.gitj` à la racine du dépôt s'il existe (filtre d'auteur, date de début, exclusions de commits, entrées manuelles).
 
 Le commit du journal est fait avec `GITHUB_TOKEN`, il ne redéclenche donc pas le workflow.
 
 Paramètres de l'action (`with:`) :
 
-| Paramètre | Défaut | Description |
-|---|---|---|
-| `output` | nom du `.gitj` en `.md` (`journal.md` sans `.gitj`) | Fichier généré |
-| `gitj` | premier `*.gitj` à la racine | Configuration à utiliser |
-| `timezone` | `Europe/Zurich` | Fuseau pour le regroupement par jour |
-| `issues` | `true` | Inclure les commentaires d'issues |
-| `commit` | `true` | Committer et pousser le journal |
-| `branch` | branche extraite | Branche où committer le journal (créée si absente) |
-| `commit-message` | `docs: update work journal` | Message du commit |
+| Paramètre        | Défaut                                              | Description                                        |
+| ---------------- | --------------------------------------------------- | -------------------------------------------------- |
+| `output`         | nom du `.gitj` en `.md` (`journal.md` sans `.gitj`) | Fichier généré                                     |
+| `gitj`           | premier `*.gitj` à la racine                        | Configuration à utiliser                           |
+| `timezone`       | `Europe/Zurich`                                     | Fuseau pour le regroupement par jour               |
+| `issues`         | `true`                                              | Inclure les commentaires d'issues                  |
+| `commit`         | `true`                                              | Committer et pousser le journal                    |
+| `branch`         | branche extraite                                    | Branche où committer le journal (créée si absente) |
+| `commit-message` | `docs: update work journal`                         | Message du commit                                  |
 
 ### En ligne de commande
 
@@ -474,18 +520,18 @@ node src/cli.js --help
 
 ## Raccourcis clavier
 
-| Raccourci | Action |
-|---|---|
-| `Cmd/Ctrl + N` | Nouveau projet |
-| `Cmd/Ctrl + O` | Ouvrir un projet |
-| `Cmd/Ctrl + S` | Enregistrer |
-| `Cmd/Ctrl + E` | Exporter en PDF |
-| `Cmd/Ctrl + Shift + E` | Exporter en CSV |
-| `Cmd/Ctrl + P` | Imprimer |
-| `Cmd/Ctrl + R` | Actualiser |
+| Raccourci                                       | Action                  |
+| ----------------------------------------------- | ----------------------- |
+| `Cmd/Ctrl + N`                                  | Nouveau projet          |
+| `Cmd/Ctrl + O`                                  | Ouvrir un projet        |
+| `Cmd/Ctrl + S`                                  | Enregistrer             |
+| `Cmd/Ctrl + E`                                  | Exporter en PDF         |
+| `Cmd/Ctrl + Shift + E`                          | Exporter en CSV         |
+| `Cmd/Ctrl + P`                                  | Imprimer                |
+| `Cmd/Ctrl + R`                                  | Actualiser              |
 | `F11` (Windows/Linux), `Ctrl + Cmd + F` (macOS) | Basculer le plein écran |
-| `Cmd/Ctrl + ,` | Token GitHub |
-| `Cmd/Ctrl + +/-` | Zoom |
+| `Cmd/Ctrl + ,`                                  | Token GitHub            |
+| `Cmd/Ctrl + +/-`                                | Zoom                    |
 
 ## Versionner vos projets
 
@@ -524,6 +570,7 @@ l’essai graphique Fedora et la régénération des icônes.
 
    Remplacer `v1.0.0` par le tag prévu. Le vérificateur utilise Python 3.11 ou
    plus récent et indique les fichiers à corriger si les versions divergent.
+
 3. Exécuter les tests, versionner les changements et s’assurer que le commit de
    publication contient le workflow. Créer ensuite un tag annoté sur ce
    commit et pousser ce tag.
