@@ -125,7 +125,7 @@ Sur Fedora, avec PySide6 (`python3-pyside6`) et `desktop-file-utils`, vérifier 
 contenu préparé du DEB et lancer brièvement le binaire en **Wayland natif** :
 
 ```bash
-python3 scripts/test-linux-icons.py src-tauri/target/release/bundle/deb/RGitJournal_1.0.0_amd64/data src-tauri/target/release/gitjournal-desktop
+python3 scripts/test-linux-icons.py src-tauri/target/release/bundle/deb/RGitJournal_1.0.1_amd64/data src-tauri/target/release/gitjournal-desktop
 ```
 
 Adapter le chemin à la version et à l’architecture construites. Le script vérifie

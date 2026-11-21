@@ -565,10 +565,10 @@ l’essai graphique Fedora et la régénération des icônes.
    ```bash
    pnpm desktop:prepare
    cargo check --manifest-path src-tauri/Cargo.toml
-   python3 scripts/check-release-version.py v1.0.0
+   python3 scripts/check-release-version.py v1.0.1
    ```
 
-   Remplacer `v1.0.0` par le tag prévu. Le vérificateur utilise Python 3.11 ou
+   Remplacer `v1.0.1` par le tag prévu. Le vérificateur utilise Python 3.11 ou
    plus récent et indique les fichiers à corriger si les versions divergent.
 
 3. Exécuter les tests, versionner les changements et s’assurer que le commit de
@@ -576,8 +576,8 @@ l’essai graphique Fedora et la régénération des icônes.
    commit et pousser ce tag.
 
    ```bash
-   git tag -a v1.0.0 -m "Résumé des changements de RGitJournal 1.0.0"
-   git push origin v1.0.0
+   git tag -a v1.0.1 -m "Résumé des changements de RGitJournal 1.0.1"
+   git push origin v1.0.1
    ```
 
 Les tags stables au format `vX.Y.Z` déclenchent les tests et les compilations
