@@ -7,7 +7,7 @@ from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Vérifie que les versions de GitJournal correspondent au tag de publication."
+        description="Vérifie que les versions de RGitJournal correspondent au tag de publication."
     )
     parser.add_argument("tag", metavar="vX.Y.Z")
     tag = parser.parse_args().tag
@@ -20,7 +20,7 @@ def main():
         return (root / filename).read_text(encoding="utf-8")
 
     footer = re.search(
-        r'<p class="version">\s*GitJournal\s+([^<\s]+)\s*</p>',
+        r'<p class="version">\s*RGitJournal\s+([^<\s]+)\s*</p>',
         read("desktop/index.html"),
     )
     lock = tomllib.loads(read("src-tauri/Cargo.lock"))
@@ -42,7 +42,7 @@ def main():
     ]
     if mismatches:
         parser.exit(1, f"Versions incompatibles avec {tag}\n" + "\n".join(mismatches) + "\n")
-    print(f"{tag} correspond à la version de GitJournal dans tous les fichiers.")
+    print(f"{tag} correspond à la version de RGitJournal dans tous les fichiers.")
 
 
 if __name__ == "__main__":

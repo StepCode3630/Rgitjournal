@@ -34,11 +34,11 @@ app_id = config["identifier"]
 assert config["app"]["enableGTKAppId"]
 launcher = root / "usr/share/applications" / (app_id + ".desktop")
 desktop = entry(launcher)
-assert desktop["Name"] == "GitJournal"
+assert desktop["Name"] == "RGitJournal"
 assert desktop.get("NoDisplay", "false") == "false"
 assert desktop["Exec"] == "gitjournal-desktop %U"
 assert "application/x-gitjournal;" in desktop["MimeType"]
-assert entry(root / "usr/share/applications/GitJournal.desktop")["NoDisplay"] == "true"
+assert entry(root / "usr/share/applications/RGitJournal.desktop")["NoDisplay"] == "true"
 subprocess.run(["desktop-file-validate", str(launcher)], check=True)
 
 application = QApplication([])

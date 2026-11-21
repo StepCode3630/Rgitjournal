@@ -1,4 +1,4 @@
-# Construction et vérifications — GitJournal Tauri
+# Construction et vérifications — RGitJournal et Tauri
 
 Toutes les commandes partent de la racine du dépôt. Utiliser Node.js 24, pnpm,
 Rust stable et Git. Node/pnpm/Rust sont des outils de développement ; le bureau
@@ -117,7 +117,7 @@ Le lanceur visible est `com.gitjournal.desktop.desktop` : son nom sans le dernie
 `.desktop` correspond à l’identifiant `com.gitjournal.desktop`. Le nom de programme
 GLib est fixé avant l’initialisation GTK, en plus de `enableGTKAppId`, pour que
 GTK 3 annonce cet identifiant à KDE via Wayland. `StartupWMClass` garde la même
-valeur pour X11/Xwayland. L’ancien `GitJournal.desktop` est conservé avec
+valeur pour X11/Xwayland. Le lanceur généré `RGitJournal.desktop` utilise
 `NoDisplay=true` pour les raccourcis existants, sans deuxième entrée dans le menu.
 La dépendance Linux directe `glib` réutilise la version déjà présente via GTK.
 
@@ -125,7 +125,7 @@ Sur Fedora, avec PySide6 (`python3-pyside6`) et `desktop-file-utils`, vérifier 
 contenu préparé du DEB et lancer brièvement le binaire en **Wayland natif** :
 
 ```bash
-python3 scripts/test-linux-icons.py src-tauri/target/release/bundle/deb/GitJournal_4.1.1_amd64/data src-tauri/target/release/gitjournal-desktop
+python3 scripts/test-linux-icons.py src-tauri/target/release/bundle/deb/RGitJournal_1.0.0_amd64/data src-tauri/target/release/gitjournal-desktop
 ```
 
 Adapter le chemin à la version et à l’architecture construites. Le script vérifie

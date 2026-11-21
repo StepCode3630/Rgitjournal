@@ -97,8 +97,8 @@ async fn open_project(state: State<'_, Shared>) -> Result<Option<Value>> {
             .and_then(|p| p.parent())
             .map(|p| p.to_path_buf());
         let mut dialog = rfd::FileDialog::new()
-            .set_title("Projet GitJournal")
-            .add_filter("Projet GitJournal", &["gitj"]);
+            .set_title("Projet RGitJournal")
+            .add_filter("Projet RGitJournal", &["gitj"]);
         if let Some(directory) = directory {
             dialog = dialog.set_directory(directory);
         }
@@ -144,8 +144,8 @@ async fn create_project(config: Value, state: State<'_, Shared>) -> Result<Optio
             return Err("Nom du projet requis".into());
         }
         let Some(path) = rfd::FileDialog::new()
-            .set_title("Projet GitJournal")
-            .add_filter("Projet GitJournal", &["gitj"])
+            .set_title("Projet RGitJournal")
+            .add_filter("Projet RGitJournal", &["gitj"])
             .set_file_name("projet.gitj")
             .save_file()
         else {
@@ -427,7 +427,7 @@ fn main() {
             {
                 let application = Submenu::with_items(
                     app,
-                    "GitJournal",
+                    "RGitJournal",
                     true,
                     &[
                         &PredefinedMenuItem::about(app, None, None)?,
@@ -497,7 +497,7 @@ fn main() {
             export_file
         ])
         .build(context)
-        .expect("Impossible de démarrer GitJournal");
+        .expect("Impossible de démarrer RGitJournal");
     app.run(|app, event| match event {
         tauri::RunEvent::ExitRequested { api, code, .. } => {
             #[cfg(target_os = "macos")]

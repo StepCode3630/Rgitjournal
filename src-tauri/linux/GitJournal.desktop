@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=GitJournal
+Name=RGitJournal
 Comment=Journal de travail Git
 Exec={{exec}} %U
 Icon={{icon}}

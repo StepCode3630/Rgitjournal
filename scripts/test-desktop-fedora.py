@@ -46,6 +46,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
    time.sleep(.3)
   else:raise RuntimeError('Interface non trouvée : '+repr(names))
   print('Journal Git rendu dans la webview Tauri.')
+  assert any(name.startswith('RGitJournal') for name in names)
   assert any(n.get_role_name()=='link' and n.get_name()=='Voir le commit sur GitHub' for n in walk(a))
   bar=next(n for n in walk(a) if n.get_role_name()=='menu bar')
   assert [bar.get_child_at_index(i).get_name() for i in range(bar.get_child_count())]==[
@@ -185,6 +186,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   assert any('Répartition des statuts' in name for name in names)
   click('Annuler')
   click('Aide')
+  wait_for(lambda:find('heading','Aide RGitJournal'))
   wait_for(lambda:find('heading','Dans le terminal'))
   wait_for(lambda:find('heading','Dans une interface graphique'))
   help_command='git commit -m "feat(utilisateurs): exemple" -m "[45][DONE]" -m "Description"'
@@ -271,7 +273,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   set_field('Auteur(s) Git (virgule ou point-virgule)','Test')
   set_field('URL du dépôt Git (facultative)','https://gitlab.com/example/gui-fixture.git')
   click('Enregistrer')
-  native=wait_for(lambda:native_dialog('Projet GitJournal'))
+  native=wait_for(lambda:native_dialog('Projet RGitJournal'))
   def accessible_text(n):
    try:
     if not n.get_state_set().contains(Atspi.StateType.EDITABLE):return ''
@@ -287,7 +289,7 @@ with tempfile.TemporaryDirectory(prefix='gitjournal-gui-') as tmp:
   wait_for(lambda:any(n.get_name()=='Voir le commit sur GitLab' for n in walk(app())))
   print('Création du projet et lien GitLab pour le commit local validés.')
   time.sleep(.3);menu('Fichier','Ouvrir un projet')
-  native=wait_for(lambda:native_dialog('Projet GitJournal'))
+  native=wait_for(lambda:native_dialog('Projet RGitJournal'))
   item=wait_for(lambda:next((n for n in walk(native) if n.get_name()=='essai.gitj'),None))
   rect=Atspi.Component.get_extents(item,Atspi.CoordType.SCREEN)
   xdo.xdo_move_mouse(xd,rect.x+rect.width//2,rect.y+rect.height//2,0);xdo.xdo_click_window(xd,0,1)

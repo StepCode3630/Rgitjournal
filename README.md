@@ -1,4 +1,4 @@
-# <img src="src/assets/icon.png" alt="" width="48" /> GitJournal
+# <img src="src/assets/icon.png" alt="" width="48" /> RGitJournal
 
 Application de bureau pour tenir un journal de travail à partir des commits
 d’un dépôt Git local, d’entrées manuelles et de commentaires GitHub facultatifs.
@@ -62,13 +62,13 @@ L’installation des paquets de bureau fonctionne sans Node.js, pnpm ni Rust.
    d’entreprise peut bloquer un installateur non signé.
    [SmartScreen](https://learn.microsoft.com/en-us/troubleshoot/microsoft-edge/development/ie-mode-blocks-addon)
    · [Smart App Control](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/overview)
-4. Lancer **GitJournal** depuis le menu Démarrer.
+4. Lancer **RGitJournal** depuis le menu Démarrer.
 
 ### macOS sur Apple Silicon
 
 1. Vérifier `git --version` dans Terminal. Si Git manque, installer les outils
    de ligne de commande Apple avec `xcode-select --install`.
-2. Ouvrir le `.dmg`, glisser **GitJournal.app** dans **Applications**, puis
+2. Ouvrir le `.dmg`, glisser **RGitJournal.app** dans **Applications**, puis
    essayer d’ouvrir l’application depuis ce dossier.
 3. Si macOS indique qu’il ne peut pas vérifier le développeur, vérifier la
    provenance du fichier. Ouvrir **Réglages Système → Confidentialité et
@@ -78,7 +78,7 @@ L’installation des paquets de bureau fonctionne sans Node.js, pnpm ni Rust.
 
 Le paquet Apple Silicon porte une signature ad hoc et reste sans certificat
 Developer ID ni notarisation. L’autorisation ci-dessus s’applique à
-GitJournal. [Signature ad hoc dans Tauri](https://v2.tauri.app/distribute/sign/macos/#ad-hoc-signing)
+RGitJournal. [Signature ad hoc dans Tauri](https://v2.tauri.app/distribute/sign/macos/#ad-hoc-signing)
 
 ### Fedora
 
@@ -86,10 +86,10 @@ Depuis le dossier de téléchargement, remplacer le nom d’exemple par celui
 du RPM téléchargé.
 
 ```bash
-sudo dnf install ./GitJournal-VERSION-1.x86_64.rpm
+sudo dnf install ./RGitJournal-VERSION-1.x86_64.rpm
 ```
 
-Lancer **GitJournal** depuis le menu des applications ou avec
+Lancer **RGitJournal** depuis le menu des applications ou avec
 `gitjournal-desktop`.
 
 ### Ubuntu et Debian
@@ -99,14 +99,19 @@ du DEB téléchargé.
 
 ```bash
 sudo apt update
-sudo apt install ./GitJournal_VERSION_amd64.deb
+sudo apt install ./RGitJournal_VERSION_amd64.deb
 ```
 
-Lancer **GitJournal** depuis le menu des applications ou avec
+Lancer **RGitJournal** depuis le menu des applications ou avec
 `gitjournal-desktop`. Si la distribution cible ne satisfait pas les
 dépendances du DEB, utiliser une base compatible ou compiler sur la cible.
 
 ### Mettre à jour
+
+Pour passer d’une installation de GitJournal 4.1.1 à RGitJournal 1.0.0,
+désinstaller d’abord l’ancienne application avec l’outil utilisé pour l’installer,
+puis installer le nouveau paquet. Si l’assistant de désinstallation propose de
+supprimer les données utilisateur, choisir de les conserver.
 
 Télécharger le nouveau paquet de la même plateforme depuis Releases et
 relancer l’installation. Sur macOS, remplacer l’ancienne application dans
@@ -117,10 +122,10 @@ dans les dépôts où ils ont été enregistrés.
 
 | Système | Étape |
 |---|---|
-| Windows | Ouvrir **Paramètres → Applications**, sélectionner **GitJournal**, puis **Désinstaller**. |
-| macOS | Quitter GitJournal, puis placer **GitJournal.app** de **Applications** dans la Corbeille. |
-| Fedora | Exécuter `sudo dnf remove git-journal`. |
-| Ubuntu ou Debian | Exécuter `sudo apt remove git-journal`. |
+| Windows | Ouvrir **Paramètres → Applications**, sélectionner **RGitJournal**, puis **Désinstaller**. |
+| macOS | Quitter RGitJournal, puis placer **RGitJournal.app** de **Applications** dans la Corbeille. |
+| Fedora | Exécuter `sudo dnf remove r-git-journal`. |
+| Ubuntu ou Debian | Exécuter `sudo apt remove r-git-journal`. |
 
 Les fichiers `.gitj` restent dans vos dépôts. Les préférences locales sont
 décrites dans [Préférences et compatibilité](#préférences-et-compatibilité).
@@ -288,7 +293,7 @@ git commit -m "feat(utilisateurs): exemple" -m "[45][DONE]" -m "Description"
 
 `[45][DONE]` signifie 45 minutes et une tâche terminée. Utiliser `[WIP]`
 pour une tâche en cours. Le bouton **?** de l’application montre le même
-principe dans un client Git graphique. GitJournal reconnaît les métadonnées
+principe dans un client Git graphique. RGitJournal reconnaît les métadonnées
 entre crochets dans le titre ou le corps du message.
 
 ```
@@ -338,7 +343,7 @@ Les commentaires sont filtrés par auteur : leur login GitHub doit figurer dans 
 
 Dans l'application, activer `"includeIssues": true` dans le `.gitj`. Le token GitHub se définit dans **Configuration → Token → GitHub** (token fine-grained avec la permission *Issues : Read-only*) ; à défaut, il est lu dans `GH_TOKEN` / `GITHUB_TOKEN`, puis via `gh auth token` (GitHub CLI). Un dépôt public fonctionne sans token, dans la limite de 60 requêtes par heure.
 
-Les commentaires ne peuvent pas être modifiés ni exclus dans GitJournal (les exceptions du `.gitj` ne s'appliquent qu'aux commits) : pour corriger un commentaire, le modifier sur GitHub.
+Les commentaires ne peuvent pas être modifiés ni exclus dans RGitJournal (les exceptions du `.gitj` ne s'appliquent qu'aux commits) : pour corriger un commentaire, le modifier sur GitHub.
 
 ### Ajouter une entrée manuelle
 
@@ -437,7 +442,7 @@ Les écritures utilisent un temporaire dans le dossier cible et la fermeture att
 
 ## Journal automatique avec GitHub Actions
 
-GitJournal peut générer un journal Markdown dans le dépôt à journaliser, à chaque push (toutes branches), à chaque commentaire ou modification d'issue, ou manuellement.
+RGitJournal peut générer un journal Markdown dans le dépôt à journaliser, à chaque push (toutes branches), à chaque commentaire ou modification d'issue, ou manuellement.
 
 Copier [doc/journal-workflow.yml](doc/journal-workflow.yml) dans `.github/workflows/journal.yml` du dépôt à journaliser. Le journal :
 
@@ -514,18 +519,18 @@ l’essai graphique Fedora et la régénération des icônes.
    ```bash
    pnpm desktop:prepare
    cargo check --manifest-path src-tauri/Cargo.toml
-   python3 scripts/check-release-version.py v4.1.2
+   python3 scripts/check-release-version.py v1.0.0
    ```
 
-   Remplacer `v4.1.2` par le tag prévu. Le vérificateur utilise Python 3.11 ou
+   Remplacer `v1.0.0` par le tag prévu. Le vérificateur utilise Python 3.11 ou
    plus récent et indique les fichiers à corriger si les versions divergent.
 3. Exécuter les tests, versionner les changements et s’assurer que le commit de
    publication contient le workflow. Créer ensuite un tag annoté sur ce
    commit et pousser ce tag.
 
    ```bash
-   git tag -a v4.1.2 -m "Résumé des changements de GitJournal 4.1.2"
-   git push origin v4.1.2
+   git tag -a v1.0.0 -m "Résumé des changements de RGitJournal 1.0.0"
+   git push origin v1.0.0
    ```
 
 Les tags stables au format `vX.Y.Z` déclenchent les tests et les compilations
@@ -570,7 +575,7 @@ Installer le paquet reconstruit après la correction des icônes. Pour remplacer
 un RPM déjà installé de même version, depuis le dossier contenant ce paquet :
 
 ```bash
-sudo dnf reinstall ./GitJournal-VERSION-ARCH.rpm
+sudo dnf reinstall ./RGitJournal-VERSION-ARCH.rpm
 kbuildsycoca6 --noincremental
 dbus-send --session --type=signal /KIconLoader org.kde.KIconLoader.iconChanged int32:0
 ```
@@ -582,9 +587,9 @@ installés sont déjà à jour mais que l’ancienne icône reste visible, relan
 deux commandes suffit à demander ce rafraîchissement, sans reconstruire le paquet
 ni supprimer de cache.
 
-Fermer puis relancer GitJournal depuis
+Fermer puis relancer RGitJournal depuis
 le menu. Si une ancienne icône reste épinglée à la barre des tâches, la désépingler
-puis épingler la nouvelle entrée **GitJournal**. Les fichiers `.gitj` et les
+puis épingler la nouvelle entrée **RGitJournal**. Les fichiers `.gitj` et les
 préférences sont conservés.
 
 Les paquets installent les tailles d’icône usuelles et le lanceur correspondant

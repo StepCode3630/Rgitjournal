@@ -73,7 +73,7 @@ jobs:
       - name: Verify the Apple Silicon bundle
         if: runner.os == 'macOS'
         run: |
-          app=src-tauri/target/release/bundle/macos/GitJournal.app
+          app=src-tauri/target/release/bundle/macos/RGitJournal.app
           executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
           lipo -verify_arch arm64 "$app/Contents/MacOS/$executable"
           codesign --verify --deep --strict "$app"
@@ -116,4 +116,4 @@ jobs:
           done
           gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
             --verify-tag \
-            --title "GitJournal $GITHUB_REF_NAME" --notes-from-tag
+            --title "RGitJournal $GITHUB_REF_NAME" --notes-from-tag

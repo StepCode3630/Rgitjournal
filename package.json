@@ -1,6 +1,6 @@
 {
   "name": "GitJournal",
-  "version": "4.1.1",
+  "version": "1.0.0",
   "description": "Journal de travail Git — Bureau Tauri/Rust et CLI JavaScript",
   "bin": {
     "gitjournal": "src/cli.js"

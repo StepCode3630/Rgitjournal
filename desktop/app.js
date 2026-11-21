@@ -545,7 +545,7 @@ const actions = {
   stats: showStatistics,
   help: () =>
     dialog(
-      "Aide GitJournal",
+      "Aide RGitJournal",
       [$("help-content").content.cloneNode(true)],
       null,
     ),
