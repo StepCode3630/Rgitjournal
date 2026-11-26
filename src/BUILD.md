@@ -93,6 +93,13 @@ stable. Le build macOS de publication utilise une signature ad hoc. Voir
 L’AppImage reste accessible avec `pnpm exec tauri build --bundles appimage` après préparation
 des ressources, mais ce format n’a pas été validé localement.
 
+Après un build natif, `pnpm desktop:portable` crée le fichier à lancer sans
+installation dans `src-tauri/target/release/bundle/portable/`. La commande
+utilise l’exécutable de release sous Windows x64 et Linux x64, ou le bundle
+`RGitJournal.app` sous macOS Apple Silicon. Sur macOS, pour reproduire la
+signature ad hoc du workflow, définir `APPLE_SIGNING_IDENTITY=-` pendant la
+compilation du bundle.
+
 ### Icônes Linux et identité Wayland
 
 Le menu KDE utilise les PNG installés dans les tailles standard de `hicolor`

@@ -77,10 +77,19 @@ jobs:
           executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
           lipo "$app/Contents/MacOS/$executable" -verify_arch arm64
           codesign --verify --deep --strict "$app"
+      - name: Package the portable build
+        run: pnpm desktop:portable
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.platform }}
           path: ${{ matrix.packages }}
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portable-${{ matrix.platform }}
+          path: src-tauri/target/release/bundle/portable/
           if-no-files-found: error
           compression-level: 0
           overwrite: true
@@ -100,6 +109,11 @@ jobs:
           pattern: desktop-*
           merge-multiple: true
           path: installers
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: portable-*
+          merge-multiple: true
+          path: portable
       - name: Publish the complete release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -113,6 +127,14 @@ jobs:
               exit 1
             fi
             assets+=("${files[0]}")
+          done
+          for suffix in windows-x64-portable.exe linux-x64-portable.tar.gz macos-arm64-portable.zip; do
+            file="portable/RGitJournal_${GITHUB_REF_NAME#v}_$suffix"
+            if [[ ! -s "$file" ]]; then
+              echo "::error::Missing or empty portable build: $file"
+              exit 1
+            fi
+            assets+=("$file")
           done
           gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
             --verify-tag \

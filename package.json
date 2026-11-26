@@ -19,6 +19,7 @@
     "desktop:check": "node scripts/build-desktop.mjs && cargo check --locked --manifest-path src-tauri/Cargo.toml",
     "test:desktop": "node --test desktop/model.test.js",
     "desktop:build": "node scripts/build-desktop.mjs && node scripts/build-native.mjs",
+    "desktop:portable": "node scripts/package-portable.mjs",
     "build": "pnpm test && pnpm test:rust && pnpm desktop:build",
     "build:linux": "pnpm test && pnpm test:rust && node scripts/build-desktop.mjs && node scripts/build-native.mjs linux",
     "build:mac": "pnpm test && pnpm test:rust && node scripts/build-desktop.mjs && node scripts/build-native.mjs darwin",

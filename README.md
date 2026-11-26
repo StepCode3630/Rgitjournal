@@ -16,6 +16,7 @@ RGitJournal est un fork du projet '[gitjournal](https://github.com/ETML-INF/gitj
     - [macOS sur Apple Silicon](#macos-sur-apple-silicon)
     - [Fedora](#fedora)
     - [Ubuntu et Debian](#ubuntu-et-debian)
+    - [Lancer sans installation](#lancer-sans-installation)
     - [Mettre à jour](#mettre-à-jour)
   - [Désinstaller](#désinstaller)
   - [Compiler depuis les sources](#compiler-depuis-les-sources)
@@ -129,6 +130,19 @@ sudo apt install ./RGitJournal_VERSION_amd64.deb
 Lancer **RGitJournal** depuis le menu des applications ou avec
 `gitjournal-desktop`. Si la distribution cible ne satisfait pas les
 dépendances du DEB, utiliser une base compatible ou compiler sur la cible.
+
+### Lancer sans installation
+
+Dans les fichiers de la release, choisir celui qui se termine par le suffixe
+correspondant à votre système.
+
+| Système | Fichier | Lancement |
+| --- | --- | --- |
+| Windows x64 | `windows-x64-portable.exe` | Ouvrir directement le fichier. Git et le runtime WebView2 doivent être installés. |
+| Linux x64 | `linux-x64-portable.tar.gz` | Extraire l’archive, puis lancer `./gitjournal-desktop` dans le dossier d’extraction. Git, GTK 3 et WebKitGTK 4.1 doivent être disponibles. |
+| macOS Apple Silicon | `macos-arm64-portable.zip` | Extraire l’archive, puis ouvrir `RGitJournal.app` depuis le Finder. Les instructions d’autorisation macOS ci-dessus s’appliquent aussi à cette version. |
+
+Ces versions utilisent le dossier de préférences habituel de l’application.
 
 ### Mettre à jour
 
@@ -582,7 +596,8 @@ l’essai graphique Fedora et la régénération des icônes.
 
 Les tags stables au format `vX.Y.Z` déclenchent les tests et les compilations
 Windows x64, Linux x64 et macOS Apple Silicon si les versions concordent.
-Le workflow réunit les cinq installateurs avant de publier la release.
+Le workflow réunit les cinq installateurs et les trois versions portables
+avant de publier la release.
 Le message du tag annoté sert de notes de version. GitHub ajoute les deux
 archives des sources. [Workflow de publication](.github/workflows/release.yml)
 
